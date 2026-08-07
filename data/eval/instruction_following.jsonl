@@ -1,0 +1,20 @@
+{"id":"exact_01","category":"exact_match","messages":[{"role":"user","content":"请严格只输出 READY，不要添加标点或解释。"}],"checks":[{"type":"exact","value":"READY"}]}
+{"id":"exact_02","category":"exact_match","messages":[{"role":"user","content":"计算 8 + 9。只输出阿拉伯数字结果。"}],"checks":[{"type":"exact","value":"17"}]}
+{"id":"exact_03","category":"exact_match","messages":[{"role":"user","content":"判断命题：所有正方形都是矩形。只输出“正确”或“错误”。"}],"checks":[{"type":"exact","value":"正确"}]}
+{"id":"exact_04","category":"exact_match","messages":[{"role":"user","content":"把英文单词 apple 翻译成中文，只输出译文。"}],"checks":[{"type":"exact","value":"苹果"}]}
+{"id":"list_01","category":"format","messages":[{"role":"user","content":"列出三种常见排序算法。必须正好三行，每行以“数字+点+空格”开头，不要写其他内容。"}],"checks":[{"type":"line_count","value":3},{"type":"numbered_list","value":3}]}
+{"id":"list_02","category":"format","messages":[{"role":"user","content":"给出四个 Python 基本数据类型。必须正好四行，每行以“- ”开头。"}],"checks":[{"type":"line_count","value":4},{"type":"bullet_list","value":4}]}
+{"id":"format_03","category":"format","messages":[{"role":"user","content":"用一句话说明什么是过拟合，回答中必须包含“训练集”和“泛化”，不能换行。"}],"checks":[{"type":"line_count","value":1},{"type":"contains_all","values":["训练集","泛化"]}]}
+{"id":"format_04","category":"format","messages":[{"role":"user","content":"只输出一个 XML 标签，标签名为 status，内容为 ok。"}],"checks":[{"type":"exact","value":"<status>ok</status>"}]}
+{"id":"json_01","category":"json","messages":[{"role":"user","content":"只输出合法 JSON 对象，字段 city 为“上海”，字段 unit 为“celsius”。不要使用 Markdown 代码块。"}],"checks":[{"type":"json_value","value":{"city":"上海","unit":"celsius"}}]}
+{"id":"json_02","category":"json","messages":[{"role":"user","content":"只输出合法 JSON：字段 success 是布尔值 true，字段 count 是数字 3。"}],"checks":[{"type":"json_value","value":{"success":true,"count":3}}]}
+{"id":"json_03","category":"json","messages":[{"role":"user","content":"把甲、乙、丙组成 JSON 数组，只输出数组本身。"}],"checks":[{"type":"json_value","value":["甲","乙","丙"]}]}
+{"id":"json_04","category":"json","messages":[{"role":"user","content":"你要调用 calculator 计算 12*7。只输出 JSON 对象：name 是 calculator，expression 是 12*7。"}],"checks":[{"type":"json_value","value":{"name":"calculator","expression":"12*7"}}]}
+{"id":"constraint_01","category":"constraints","messages":[{"role":"user","content":"用 20 到 35 个字符概括梯度下降，必须包含“损失”，不要使用英文。"}],"checks":[{"type":"char_range","min":20,"max":35},{"type":"contains_all","values":["损失"]},{"type":"regex_forbidden","value":"[A-Za-z]"}]}
+{"id":"constraint_02","category":"constraints","messages":[{"role":"user","content":"用不超过 30 个字符说明注意力机制，必须同时出现“查询”和“权重”。"}],"checks":[{"type":"char_range","min":1,"max":30},{"type":"contains_all","values":["查询","权重"]}]}
+{"id":"constraint_03","category":"constraints","messages":[{"role":"user","content":"用一句中文解释 batch，必须包含“样本”，禁止出现“数据集”三个字。"}],"checks":[{"type":"line_count","value":1},{"type":"contains_all","values":["样本"]},{"type":"excludes_all","values":["数据集"]}]}
+{"id":"constraint_04","category":"constraints","messages":[{"role":"user","content":"输出字符串 qwen-4b 的全大写形式，只输出结果。"}],"checks":[{"type":"exact","value":"QWEN-4B"}]}
+{"id":"reasoning_01","category":"reasoning","messages":[{"role":"user","content":"小明有 15 本书，送出 4 本，又买了 6 本。只输出最后的书本数量。"}],"checks":[{"type":"exact","value":"17"}]}
+{"id":"reasoning_02","category":"reasoning","messages":[{"role":"user","content":"数列 2, 6, 12, 20 的下一项是多少？只输出数字。"}],"checks":[{"type":"exact","value":"30"}]}
+{"id":"reasoning_03","category":"reasoning","messages":[{"role":"user","content":"如果 A 比 B 高，B 比 C 高，谁最矮？只输出字母。"}],"checks":[{"type":"exact","value":"C"}]}
+{"id":"reasoning_04","category":"reasoning","messages":[{"role":"user","content":"一个单价 12 元的商品买 5 件，打八折后总价多少元？只输出数字。"}],"checks":[{"type":"exact","value":"48"}]}

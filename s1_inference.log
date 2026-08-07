@@ -1,0 +1,80 @@
+Traceback (most recent call last):
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\httpx\_transports\default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\httpx\_transports\default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\httpcore\_sync\connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\httpcore\_sync\connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\httpcore\_sync\connection.py", line 101, in handle_request
+    raise exc
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\httpcore\_sync\connection.py", line 78, in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\httpcore\_sync\connection.py", line 124, in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\httpcore\_backends\sync.py", line 207, in connect_tcp
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\httpcore\_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectTimeout: [WinError 10060] 由于连接方在一段时间后没有正确答复或连接的主机没有反应，连接尝试失败。
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\A\Desktop\ai\TRANSFORMERS\qwen_post_training_lab\src\evaluate_multi_if.py", line 290, in <module>
+    main()
+  File "C:\Users\A\Desktop\ai\TRANSFORMERS\qwen_post_training_lab\src\evaluate_multi_if.py", line 183, in main
+    tokenizer, model, compute_dtype, load_seconds = load_model(
+                                                    ^^^^^^^^^^^
+  File "C:\Users\A\Desktop\ai\TRANSFORMERS\qwen_post_training_lab\src\evaluate_instruction.py", line 89, in load_model
+    tokenizer = AutoTokenizer.from_pretrained(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\transformers\models\auto\tokenization_auto.py", line 862, in from_pretrained
+    return tokenizer_class.from_pretrained(pretrained_model_name_or_path, *inputs, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\transformers\tokenization_utils_base.py", line 1673, in from_pretrained
+    for template in list_repo_templates(
+                    ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\transformers\utils\hub.py", line 149, in list_repo_templates
+    for entry in hf_api().list_repo_tree(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\huggingface_hub\hf_api.py", line 3945, in list_repo_tree
+    for path_info in paginate(path=tree_url, headers=headers, params={"recursive": recursive, "expand": expand}):
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\huggingface_hub\utils\_pagination.py", line 36, in paginate
+    r = session.get(path, params=params, headers=headers, timeout=timeout)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\httpx\_client.py", line 1053, in get
+    return self.request(
+           ^^^^^^^^^^^^^
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\httpx\_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\httpx\_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\httpx\_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\httpx\_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\httpx\_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\httpx\_transports\default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python312\Lib\contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "C:\Users\A\AppData\Roaming\Python\Python312\site-packages\httpx\_transports\default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectTimeout: [WinError 10060] 由于连接方在一段时间后没有正确答复或连接的主机没有反应，连接尝试失败。

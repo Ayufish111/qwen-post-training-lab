@@ -1,0 +1,50 @@
+{
+  "suite": "Multi-IF Chinese",
+  "official_dataset": "facebook/Multi-IF",
+  "official_rule_code": "/root/autodl-tmp/third_party/Multi-IF",
+  "official_rule_revision": null,
+  "experiment_id": "S2",
+  "model": "/root/autodl-tmp/modelscope/models/Qwen--Qwen3-4B-Base/snapshots/master",
+  "model_revision": "main",
+  "adapter": "outputs/sft/S2/final_adapter",
+  "rows": 454,
+  "limit": null,
+  "data_sha256": "ce43827ef4b43c6fde34038180ed2deb4795a7aef331e187de5fd0a5da15601c",
+  "decoding": {
+    "max_new_tokens": 512,
+    "do_sample": false,
+    "enable_thinking": false,
+    "compute_dtype": "bfloat16"
+  },
+  "model_load_seconds": 7.5385991260409355,
+  "peak_gpu_memory_gb": 3.007902145385742,
+  "metrics": {
+    "turn_1": {
+      "prompts": 454,
+      "instructions": 610,
+      "strict_prompt_accuracy": 0.43612334801762115,
+      "strict_instruction_accuracy": 0.5409836065573771,
+      "loose_prompt_accuracy": 0.4647577092511013,
+      "loose_instruction_accuracy": 0.5639344262295082,
+      "official_overall_average": 0.5014497725139019
+    },
+    "turn_2": {
+      "prompts": 454,
+      "instructions": 1064,
+      "strict_prompt_accuracy": 0.18722466960352424,
+      "strict_instruction_accuracy": 0.49154135338345867,
+      "loose_prompt_accuracy": 0.2026431718061674,
+      "loose_instruction_accuracy": 0.5122180451127819,
+      "official_overall_average": 0.3484068099764831
+    },
+    "turn_3": {
+      "prompts": 454,
+      "instructions": 1518,
+      "strict_prompt_accuracy": 0.046255506607929514,
+      "strict_instruction_accuracy": 0.4137022397891963,
+      "loose_prompt_accuracy": 0.05066079295154185,
+      "loose_instruction_accuracy": 0.4321475625823452,
+      "official_overall_average": 0.2356915254827532
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "suite": "Multi-IF Chinese",
+  "official_dataset": "facebook/Multi-IF",
+  "official_rule_code": "C:\\Users\\A\\Desktop\\ai\\TRANSFORMERS\\qwen_post_training_lab\\third_party\\Multi-IF",
+  "official_rule_revision": null,
+  "experiment_id": "S1",
+  "model": "Qwen/Qwen3-4B-Base",
+  "model_revision": "main",
+  "adapter": "C:\\Users\\A\\Desktop\\ai\\TRANSFORMERS\\qwen_post_training_lab\\outputs\\sft\\S1\\final_adapter",
+  "rows": 454,
+  "limit": null,
+  "data_sha256": "ce43827ef4b43c6fde34038180ed2deb4795a7aef331e187de5fd0a5da15601c",
+  "decoding": {
+    "max_new_tokens": 512,
+    "do_sample": false,
+    "enable_thinking": false,
+    "compute_dtype": "bfloat16"
+  },
+  "model_load_seconds": 13.687192799999998,
+  "peak_gpu_memory_gb": 2.8711915016174316,
+  "metrics": {
+    "turn_1": {
+      "prompts": 454,
+      "instructions": 610,
+      "strict_prompt_accuracy": 0.3964757709251101,
+      "strict_instruction_accuracy": 0.5081967213114754,
+      "loose_prompt_accuracy": 0.43171806167400884,
+      "loose_instruction_accuracy": 0.5409836065573771,
+      "official_overall_average": 0.46934354011699286
+    },
+    "turn_2": {
+      "prompts": 454,
+      "instructions": 1064,
+      "strict_prompt_accuracy": 0.16519823788546256,
+      "strict_instruction_accuracy": 0.4934210526315789,
+      "loose_prompt_accuracy": 0.18722466960352424,
+      "loose_instruction_accuracy": 0.5169172932330827,
+      "official_overall_average": 0.3406903133384121
+    },
+    "turn_3": {
+      "prompts": 454,
+      "instructions": 1518,
+      "strict_prompt_accuracy": 0.039647577092511016,
+      "strict_instruction_accuracy": 0.4077733860342556,
+      "loose_prompt_accuracy": 0.048458149779735685,
+      "loose_instruction_accuracy": 0.43017127799736493,
+      "official_overall_average": 0.2315125977259668
+    }
+  }
+}

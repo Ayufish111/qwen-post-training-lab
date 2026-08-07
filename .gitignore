@@ -1,0 +1,36 @@
+# Python and test caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Local environments and secrets
+.venv/
+venv/
+.env
+.env.*
+*.pem
+*.key
+
+# Rebuildable local caches and temporary files
+data/cache/
+nltk_data/
+tmp/
+.docx_qa/
+
+# Completed-run intermediate checkpoints. Final adapters and metrics are kept.
+outputs/sft/*/checkpoint-*/
+**/optimizer.pt
+**/scheduler.pt
+**/rng_state*.pth
+
+# Duplicate local archives; their source files are tracked directly.
+outputs_sft.tar.gz
+b0_eval_backup.tar.gz
+
+# Editor and OS metadata
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
