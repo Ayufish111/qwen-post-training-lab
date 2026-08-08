@@ -13,14 +13,12 @@ import argparse
 import hashlib
 import importlib
 import json
-import random
 import sys
 import time
 from pathlib import Path
 from typing import Any
 
 import torch
-import yaml
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 
@@ -265,7 +263,14 @@ def main() -> None:
                 answer_count = len(tokenizer.encode(answer, add_special_tokens=False))
                 last_candidate = {
                     "id": row_id,
-                    "messages": row["messages"],
+                    "messages": row["messages"]
+                    + [
+                        {
+                            "role": "assistant",
+                            "reasoning_content": reasoning,
+                            "content": answer,
+                        }
+                    ],
                     "instruction_ids": row["instruction_ids"],
                     "kwargs": row["kwargs"],
                     "constraint_categories": row.get("constraint_categories", []),
