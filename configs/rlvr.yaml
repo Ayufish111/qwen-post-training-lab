@@ -22,6 +22,7 @@ data:
   source: data/sft/full_clean_10000.jsonl
   train_output: data/rlvr/constraint_train_2000.jsonl
   validation_output: data/rlvr/constraint_validation_100.jsonl
+  manual_review_output: data/rlvr/manual_review_queue_100.jsonl
   manifest_output: reports/manifests/rlvr_constraint_data_manifest.json
   audit_output: reports/rlvr/constraint_data_audit.md
   train_size: 2000
@@ -64,20 +65,20 @@ constraint_sampling:
       weight: 1.0
       template: 你的回答必须包含以下关键词：{keywords}。
       keyword_count: [1, 3]
-      value_source: source_answer_terms
+      value_source: source_prompt_idf_terms
 
     keywords:frequency:
       weight: 0.8
       template: 你的回答中“{keyword}”必须至少出现 {frequency} 次。
       frequency: [1, 3]
       relation: at least
-      value_source: source_answer_terms
+      value_source: source_prompt_idf_terms
 
     keywords:forbidden_words:
       weight: 1.0
       template: 你的回答不能包含以下词语：{forbidden_words}。
       forbidden_word_count: [1, 3]
-      value_source: source_answer_terms
+      value_source: source_prompt_idf_terms
 
     length_constraints:number_sentences:
       weight: 0.8
@@ -160,7 +161,7 @@ constraint_sampling:
 
     punctuation:no_comma:
       weight: 0.5
-      template: 你的回答不能包含逗号。
+      template: 你的回答不能包含英文逗号（,）。
 
   mutually_exclusive_groups:
     - [detectable_format:json_format, length_constraints:number_paragraphs, length_constraints:nth_paragraph_first_word, detectable_format:number_bullet_lists, detectable_format:multiple_sections, combination:two_responses, combination:repeat_prompt]

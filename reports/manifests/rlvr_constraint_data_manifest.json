@@ -1,0 +1,86 @@
+{
+  "schema_version": "rlvr_constraint_data/v1",
+  "status": "pending_manual_review",
+  "seed": 42,
+  "config": {
+    "path": "C:/Users/A/Desktop/ai/TRANSFORMERS/qwen_post_training_lab/configs/rlvr.yaml",
+    "sha256": "429d901aea2422f7dd4ad26bc25016945de60a12a1171d1f33adcb68879f7d8d"
+  },
+  "source": {
+    "path": "data/sft/full_clean_10000.jsonl",
+    "sha256": "0df5919f5ade41dffd5e19f6c7c69cf12d82b95bba21f9c3cdeec6e8b7fff03d"
+  },
+  "outputs": {
+    "train": {
+      "path": "data/rlvr/constraint_train_2000.jsonl",
+      "rows": 2000,
+      "sha256": "6d703f7f51ed11cd1d82b1027bc1202705031015fd5e52f38a7b4a6153eafc49"
+    },
+    "validation": {
+      "path": "data/rlvr/constraint_validation_100.jsonl",
+      "rows": 100,
+      "sha256": "2b4d3301888ebab5a60724d54ce1693fd353e57b5ed870ad660b04f624b4fe40"
+    },
+    "manual_review": {
+      "path": "data/rlvr/manual_review_queue_100.jsonl",
+      "rows": 100,
+      "sha256": "3d8ecfd657a12dde4beabb75c40a744f54e96209a5988cca3d73d3c3654b71bf"
+    }
+  },
+  "counts": {
+    "task_buckets": {
+      "creative_writing": 147,
+      "dialogue_roleplay": 210,
+      "extraction_classification": 147,
+      "general_instruction": 735,
+      "knowledge_qa": 672,
+      "rewrite_summary": 126,
+      "translation": 63
+    },
+    "context_turns": {
+      "1": 1470,
+      "2": 420,
+      "3": 210
+    },
+    "constraints_per_prompt": {
+      "1": 735,
+      "2": 945,
+      "3": 420
+    },
+    "instruction_ids": {
+      "combination:repeat_prompt": 41,
+      "combination:two_responses": 83,
+      "detectable_content:number_placeholders": 57,
+      "detectable_content:postscript": 62,
+      "detectable_format:json_format": 80,
+      "detectable_format:multiple_sections": 129,
+      "detectable_format:number_bullet_lists": 262,
+      "detectable_format:number_highlighted_sections": 207,
+      "detectable_format:title": 397,
+      "keywords:existence": 374,
+      "keywords:forbidden_words": 357,
+      "keywords:frequency": 280,
+      "length_constraints:nth_paragraph_first_word": 124,
+      "length_constraints:number_paragraphs": 219,
+      "length_constraints:number_sentences": 239,
+      "length_constraints:number_words": 259,
+      "punctuation:no_comma": 173,
+      "startend:end_checker": 356,
+      "startend:quotation": 186
+    }
+  },
+  "checks": {
+    "source_prompt_overlap_removed": 0,
+    "general_instruction": 735,
+    "knowledge_qa": 672,
+    "creative_writing": 147,
+    "dialogue_roleplay": 210,
+    "extraction_classification": 147,
+    "rewrite_summary": 126,
+    "translation": 63,
+    "source_ids_unique": 2100,
+    "output_ids_unique": 2100,
+    "final_prompt_overlap_with_multi_if": 0,
+    "checker_argument_errors": 0
+  }
+}
