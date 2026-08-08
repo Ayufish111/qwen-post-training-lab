@@ -1,6 +1,6 @@
 {
   "schema_version": "rlvr_constraint_data/v1",
-  "status": "pending_manual_review",
+  "status": "approved_for_t1_and_rlvr",
   "seed": 42,
   "config": {
     "path": "C:/Users/A/Desktop/ai/TRANSFORMERS/qwen_post_training_lab/configs/rlvr.yaml",
@@ -83,5 +83,12 @@
     "output_ids_unique": 2100,
     "final_prompt_overlap_with_multi_if": 0,
     "checker_argument_errors": 0
+  },
+  "manual_review": {
+    "report": "C:/Users/A/Desktop/ai/TRANSFORMERS/qwen_post_training_lab/reports/rlvr/constraint_manual_review.md",
+    "rows": 100,
+    "counts": {
+      "pass": 100
+    }
   }
 }

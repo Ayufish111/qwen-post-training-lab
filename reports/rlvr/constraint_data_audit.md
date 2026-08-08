@@ -1,6 +1,6 @@
 # RLVR Constraint Data Audit
 
-Status: pending 100-row manual review. Do not train T1 or RLVR yet.
+Status: approved_for_t1_and_rlvr after completed 100-row manual review.
 
 - Train rows: 2000
 - Validation rows: 100
