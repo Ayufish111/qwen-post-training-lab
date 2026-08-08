@@ -1,6 +1,6 @@
 # Qwen3 中文后训练项目交接说明
 
-> 更新时间：2026-08-05
+> 更新时间：2026-08-08
 >
 > 用途：新开 Codex 对话时，让新对话先阅读本文件，再继续项目。本文记录已确认事实、当前状态和下一步，不代表所有任务均已完成。
 
@@ -18,10 +18,10 @@ C:\Users\A\Desktop\ai\TRANSFORMERS\qwen_post_training_lab
 2. 4-bit QLoRA SFT。
 3. LoRA target、数据质量、数据规模三组控制变量实验。
 4. Multi-IF 中文多轮指令跟随评测与错误分析。
-5. SFT 闭环完成后做一次 DPO，不为 DPO 额外设计消融。
+5. SFT 闭环后，使用共同 Thinking cold-start 初始化，做 GRPO、DAPO-style 与条件执行的 CA-DAPO 受控 RLVR 对比。
 6. 整理 README、GitHub、简历和面试深挖材料。
 
-项目定位是完整、可复现的后训练工程，不应包装成算法创新或论文成果。
+项目定位是完整、可复现的后训练工程研究，不包装成论文级通用算法创新。
 
 ## 2. 数据设计
 
@@ -72,13 +72,13 @@ labels = [-100] * len(prompt_ids) + input_ids[len(prompt_ids):]
 
 ## 3. 冻结实验矩阵
 
-| ID | 数据 | LoRA target | 实验目的 |
-|---|---|---|---|
-| B0 | 无训练数据 | 无 | Base 基线 |
-| S1 | clean 2k | `q/k/v/o` | attention target 方案 |
-| S2 | 同一 clean 2k | `all-linear` | target 消融 |
-| S3 | raw 2k | S1/S2 胜者 | 数据质量消融 |
-| S4 | full clean 10k | S1/S2 胜者 | 数据规模和最终 SFT |
+| ID | 数据 | LoRA target | Multi-IF turn 1/2/3 | 实验目的 |
+|---|---|---|---|---|
+| B0 | 无训练数据 | 无 | 0.404528 / 0.204584 / 0.160707 | Base 基线 |
+| S1 | clean 2k | `q/k/v/o` | 0.469344 / 0.340690 / 0.231513 | attention target 方案 |
+| S2 | 同一 clean 2k | `all-linear` | 0.501450 / 0.348407 / 0.235692 | target 消融 |
+| S3 | raw 2k | `all-linear` | 0.453707 / 0.306988 / 0.203443 | 数据质量消融 |
+| S4 | full clean 10k | `all-linear` | 0.449160 / 0.324287 / 0.229305 | 数据规模和最终 SFT |
 
 重要约束：
 
@@ -86,6 +86,13 @@ labels = [-100] * len(prompt_ids) + input_ids[len(prompt_ids):]
 - S3 固定 S1/S2 的胜出 target，只改变数据质量。
 - S4 必须重新从 Base 开始训练，不能续训 S1/S2。
 - S1/S2 的 eval loss 只能作为诊断，最终用 Multi-IF 选胜者。
+
+组 1 已成立结论：
+
+- S2 三轮均高于 S1：当前配置下 all-linear 优于 attention target。
+- S2 三轮均高于 S3：相同 2k 规模和预算下 clean 优于 raw。
+- S4 三轮均高于 B0：完整 SFT 相比 Base 有收益。
+- S4 三轮均低于 S2：clean 从 2k 增加到 10k 没有改善 Multi-IF，这是必须保留的负结果。
 
 ## 4. QLoRA 配置
 
@@ -140,99 +147,45 @@ enable_thinking: false
 
 脚本支持 `--resume`：每完成一条就追加到 JSONL，中断后根据样本 ID 跳过已完成结果。
 
-B0 已完成，结果位于：
+五组均已完成，结果位于：
 
 ```text
-reports/eval/B0_multi_if_zh.jsonl
-reports/eval/B0_multi_if_zh_summary.json
+reports/eval/{B0,S1,S2,S3,S4}_multi_if_zh.jsonl
+reports/eval/{B0,S1,S2,S3,S4}_multi_if_zh_summary.json
 ```
 
-B0 指标：
+截至 2026-08-08 的本机核验：五组各 `454/454`，各有 454 个唯一 ID，ID 集合完全一致；每行均有
+3 个 turn，无空回答。数据 SHA256 均为：
 
-| turn | official_overall_average |
-|---|---:|
-| turn 1 | 0.404528 |
-| turn 2 | 0.204584 |
-| turn 3 | 0.160707 |
+```text
+ce43827ef4b43c6fde34038180ed2deb4795a7aef331e187de5fd0a5da15601c
+```
 
-截至 2026-08-05 的本机实时检查：
-
-- B0 JSONL：`454/454`，已完成并有 summary。
-- S1 JSONL：`429/454`，未完成，当前没有 summary。
-- `s1_inference.log` 最后记录为一次 Hugging Face 网络连接超时。
-- 本机尚未发现 S2 的评测结果；S2 可能仍在 AutoDL，需登录后核验，不得凭记忆宣称完成。
+重要局限：S4、S2、S3 的 1362 次生成全部达到 512 token 上限，S1 为 1361/1362，B0 为
+946/1362。固定协议下的相对比较仍可使用，但不能宣称输出自然、简洁或没有重复。完整审计见
+`reports/final_comparison.md`。
 
 ## 6. 下一步执行顺序
 
-### 6.1 先完成本机 S1
-
-当前 VS Code 终端若是 CMD，使用这一整行：
-
-```cmd
-cd /d "C:\Users\A\Desktop\ai\TRANSFORMERS\qwen_post_training_lab" && set "HF_HOME=C:\Users\A\.cache\huggingface" && set "HF_HUB_OFFLINE=1" && set "TRANSFORMERS_OFFLINE=1" && set "NLTK_DATA=C:\Users\A\Desktop\ai\TRANSFORMERS\qwen_post_training_lab\nltk_data" && set "PYTHONUTF8=1" && "C:\Users\A\anaconda3\envs\pytorch\python.exe" src\evaluate_multi_if.py --experiment-id S1 --adapter "outputs\sft\S1\final_adapter" --max-new-tokens 512 --resume
-```
-
-它应跳过前 429 条，只生成缺失的 25 条，最后生成：
+组 1 的 P0/G-S4 已闭合。组 2 固定主线为：
 
 ```text
-reports/eval/S1_multi_if_zh_summary.json
+Qwen3 Base
+  -> T1：2k DA-CoTD-inspired 难度感知 Thinking cold-start
+      -> R0：GRPO
+      -> R1：单卡 DAPO-style reproduction
+      -> R2：CA-DAPO（仅在 P2 预算与稳定性门禁通过时）
 ```
 
-若离线模式仍尝试联网，先检查脚本实际加载的模型路径和本机 HF cache 是否完整，不要删除已有 JSONL。
+当前唯一实现阶段是先冻结数据边界，不训练 T1，也不编写 RL trainer：
 
-### 6.2 核验 AutoDL 的 S2
+1. 将 454 条 Multi-IF 按 `seed=42` 固定切成 failure-dev 80 条与 untouched test 374 条。
+2. 输出两份 CSV、两份 ID 清单和包含 SHA256/交集检查的 manifest。
+3. 确认 dev/test ID 无交集，并保证 T1/RL 训练数据不使用任何 Multi-IF 原题或 ID。
+4. 完成专家审核与配置冻结后，才构造独立的 2k RLVR 约束训练数据。
 
-AutoDL 模型来自 ModelScope 本地快照：
-
-```text
-/root/autodl-tmp/modelscope/models/Qwen--Qwen3-4B-Base/snapshots/master
-```
-
-恢复命令：
-
-```bash
-cd ~/autodl-tmp
-export NLTK_DATA=/root/autodl-tmp/nltk_data
-python src/evaluate_multi_if.py \
-  --model /root/autodl-tmp/modelscope/models/Qwen--Qwen3-4B-Base/snapshots/master \
-  --experiment-id S2 \
-  --adapter outputs/sft/S2/final_adapter \
-  --max-new-tokens 512 \
-  --resume
-```
-
-长任务应该放进 `screen`，避免 SSH/VS Code Remote 断开后进程退出：
-
-```bash
-screen -dmS s2_eval bash -lc 'cd ~/autodl-tmp && export NLTK_DATA=/root/autodl-tmp/nltk_data && python src/evaluate_multi_if.py --model /root/autodl-tmp/modelscope/models/Qwen--Qwen3-4B-Base/snapshots/master --experiment-id S2 --adapter outputs/sft/S2/final_adapter --max-new-tokens 512 --resume >> s2_eval.log 2>&1'
-```
-
-查看状态：
-
-```bash
-screen -ls
-tail -f ~/autodl-tmp/s2_eval.log
-```
-
-### 6.3 S1/S2 均完成后
-
-1. 把 AutoDL 的 `S2_multi_if_zh.jsonl` 和 summary 下载到本机 `reports/eval/`。
-2. 比较 S1/S2 三个 turn 的 strict/loose、prompt/instruction 指标和 official average。
-3. 同时报告参数量和训练时间，再选 `attention` 或 `all-linear`。
-4. 用胜者训练 S3 和 S4。
-5. 对 S3/S4 使用同一 Multi-IF 设置评测。
-6. 汇总四个比较：S1 vs S2、clean 2k vs raw 2k、clean 2k vs clean 10k、B0 vs S4。
-7. 做失败样本分类和局限分析。
-8. 再进入偏好数据与 DPO 阶段。
-
-如果 `attention` 胜出：
-
-```bash
-python src/train_sft.py --experiment S3 --target-strategy attention
-python src/train_sft.py --experiment S4 --target-strategy attention
-```
-
-如果 `all-linear` 胜出，把参数替换为 `all-linear`。
+详细方案和预算门禁见 `reports/post_sft_upgrade_plan.md`。不得在模型、脚本和配置全部冻结前查看
+untouched test 分数。
 
 ## 7. 已解决或易复发的故障
 
@@ -253,6 +206,8 @@ python src/train_sft.py --experiment S4 --target-strategy attention
 configs/project.yaml
 reports/experiment_plan.md
 reports/sft_data_audit.md
+reports/final_comparison.md
+reports/post_sft_upgrade_plan.md
 reports/eval/*_summary.json
 src/train_sft.py
 src/evaluate_multi_if.py
@@ -333,11 +288,13 @@ AutoTokenizer.from_pretrained
 ```text
 从零理解 GPT/nanoGPT
 -> Hugging Face 常规微调与 Trainer
--> 当前 Qwen3 QLoRA SFT + 消融 + DPO
--> 第二个项目：Agent + GRPO（当前项目完成后单独设计）
+-> 当前 Qwen3 QLoRA SFT 消融
+-> DA-CoTD-inspired Thinking cold-start
+-> GRPO / DAPO-style / CA-DAPO 受控 RLVR 对比
+-> 后续再单独设计 Agent 项目
 ```
 
-原则：当前项目先做完整、结果真实、能深入解释；不为了赶时间堆砌 GRPO、分布式训练或论文标签。Agent + GRPO 作为下一个独立项目，不混入当前消融矩阵。
+原则：当前项目先做完整、结果真实、能深入解释；RLVR 组保持最小可归因矩阵，不堆分布式训练或论文标签。Agent 仍作为后续独立项目。
 
 ## 12. 沟通与修改约束
 
@@ -356,5 +313,5 @@ AutoTokenizer.from_pretrained
 在新对话中直接发送：
 
 ```text
-请先完整阅读 C:\Users\A\Desktop\ai\TRANSFORMERS\qwen_post_training_lab\PROJECT_HANDOFF.md，并检查项目当前文件和评测进度。不要重新设计实验，也不要先改代码。先告诉我 S1/S2 当前各跑到多少、下一步唯一要执行的命令，以及该命令为什么这样写，然后继续带我完成整个项目。
+请先完整阅读 C:\Users\A\Desktop\ai\TRANSFORMERS\qwen_post_training_lab\PROJECT_HANDOFF.md、reports/final_comparison.md 和 reports/post_sft_upgrade_plan.md，并检查 Git 与当前产物。不要重新设计实验或覆盖已有 JSONL。先告诉我当前门禁状态、下一步唯一动作及其原因，再继续带我完成项目；每次代码改动都解释输入、输出、作用、数据流和设计理由。
 ```

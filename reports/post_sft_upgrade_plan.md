@@ -1,30 +1,30 @@
-# Qwen3 中文后训练升级实验方案 v5.2
+# Qwen3 中文后训练升级实验方案 v5.3
 
 > 主题：从可审计 SFT 消融，扩展到 GRPO、DAPO 与 CA-DAPO 的受控 RLVR 对比  
-> 更新时间：2026-08-07  
+> 更新时间：2026-08-08
 > 项目定位：实习项目与工程研究，不宣称达到论文级通用算法创新  
 > 预算上限：S4-HF 完成后的新增 AutoDL 费用不超过人民币 50 元  
-> 本文状态：已吸收第一轮专家审核意见，并将 DACoT-inspired 压缩纳入 T1；新增脚本尚未创建
+> 本文状态：P0/S4-HF 已闭合；已修正 DA-CoTD 命名并加入固定质量护栏；组 2 新增脚本尚未创建
 
 ---
 
 ## 0. 执行摘要
 
-已完成的 SFT 实验 B0/S1/S2/S3 不修改、不重跑。S4 已完成训练，当前只需完成 S4-HF
-全量评测，闭合组 1。
+SFT 实验 B0/S1/S2/S3/S4 及其同协议 HF 评测均已完成，不修改、不重跑。P0 已闭合，当前进入
+组 2 的实现前冻结与数据边界阶段。
 
 组 2 不再继续旧版 T2 二次蒸馏、SimPO 或多条并行扩展，而是固定为一条精简的 RLVR
 主线：
 
 ```text
 Qwen3 Base
-   -> T1：2k DACoT-inspired 难度自适应 Thinking cold-start
+   -> T1：2k DA-CoTD-inspired 难度感知 Thinking cold-start
        |-> R0：GRPO
        |-> R1：单卡 DAPO-style reproduction
        `-> R2：CA-DAPO（P2，约束感知采样变体）
 ```
 
-执行优先级固定为：P0 闭合 S4-HF；P1 跑通 T1、R0、R1；P2 只在 P1 技术稳定、test 尚未
+执行优先级固定为：P0 已完成；P1 跑通 T1、R0、R1；P2 只在 P1 技术稳定、test 尚未
 打开且预算满足客观门禁时运行 R2。若进入 P2，最终 test 评测 R0/R1/R2 三次；若未进入 P2，
 最终 test 只评测 R0/R1 两次。不能根据 dev/test 分数决定是否运行或隐藏 R2。
 
@@ -46,34 +46,24 @@ Qwen3 Base
 | S1 | clean 2k | attention | 0.469344 / 0.340690 / 0.231513 | 完成，454/454 |
 | S2 | clean 2k | all-linear | 0.501450 / 0.348407 / 0.235692 | 完成，454/454 |
 | S3 | raw 2k | all-linear | 0.453707 / 0.306988 / 0.203443 | 完成，454/454 |
-| S4 | full clean 10k | all-linear | 待填 | 训练完成，S4-HF 待闭合 |
+| S4 | full clean 10k | all-linear | 0.449160 / 0.324287 / 0.229305 | 完成，454/454 |
 
 已成立结论：
 
 - S2 三轮均优于 S1：在当前配置下 all-linear 优于 attention target。
 - S2 三轮均优于 S3：在相同规模与训练预算下 clean 数据优于 raw 数据。
-- S4 vs S2 的规模结论、B0 vs S4 的总收益结论，必须等待 S4-HF 后填写。
+- S4 三轮均低于 S2：在当前固定训练预算和评测协议下，clean 从 2k 增加到 10k 未带来提升。
+- S4 三轮均高于 B0：完整 SFT 相比 Base 有收益。
 
-组 1 的四份已完成评测使用同一数据文件，SHA256 为：
+组 1 的五份评测使用同一数据文件，SHA256 为：
 
 ```text
 ce43827ef4b43c6fde34038180ed2deb4795a7aef331e187de5fd0a5da15601c
 ```
 
-### 1.2 S4-HF 的唯一当前任务
+### 1.2 S4-HF 验收结果
 
-```bash
-cd /root/autodl-tmp
-
-python src/evaluate_multi_if.py \
-  --model /root/autodl-tmp/modelscope/models/Qwen--Qwen3-4B-Base/snapshots/master \
-  --experiment-id S4 \
-  --adapter /root/autodl-tmp/outputs/sft/S4/final_adapter \
-  --max-new-tokens 512 \
-  --resume
-```
-
-验收条件 G-S4：
+验收条件 G-S4 已全部通过：
 
 ```text
 reports/eval/S4_multi_if_zh.jsonl 行数 = 454
@@ -85,7 +75,12 @@ summary.decoding.do_sample = false
 summary.decoding.enable_thinking = false
 ```
 
-S4-HF 完成前，不实施组 2，不安装或升级训练依赖。
+额外审计发现：S4 的 1362 次 turn 生成全部达到 512 token 上限；S2/S3 同样全部触顶，S1 为
+1361/1362，B0 为 946/1362。组 1 的同协议相对比较仍可使用，但不能宣称自然对话质量或长度控制
+良好。详细结果见 `reports/final_comparison.md`。
+
+下一步唯一实现任务是冻结 Multi-IF dev/test 数据边界；在该切分与 manifest 验收前，不构造 T1
+数据、不训练模型，也不实现 RL trainer。
 
 ---
 
@@ -94,7 +89,7 @@ S4-HF 完成前，不实施组 2，不安装或升级训练依赖。
 ### 2.1 项目目标
 
 1. 保留组 1 的数据治理、LoRA target、数据质量和数据规模证据链。
-2. 用 DACoT-inspired 难度自适应 reasoning compression 构造共同 T1 cold-start。
+2. 用 DA-CoTD-inspired 难度感知 reasoning compression 构造共同 T1 cold-start。
 3. 用 TRL 原生 GRPO 建立基线，并实现一个明确标注一致性边界的单卡 DAPO-style 对比。
 4. 在 DAPO 上只增加一个可归因的机制：Constraint-Aware Dynamic Sampling。
 5. 使用程序化约束验证器构造 RLVR 奖励，避免依赖付费模型裁判。
@@ -132,7 +127,7 @@ primary_score = mean(
 
 ### 3.1 共同初始化 T1
 
-T1 是 R0/R1/R2 的共同 DACoT-inspired cold-start checkpoint，不进入最终 test 三组主表。T1 只在开发集上
+T1 是 R0/R1/R2 的共同 DA-CoTD-inspired cold-start checkpoint，不进入最终 test 三组主表。T1 只在开发集上
 验收，以确认模型能够稳定产生可解析的 thinking 和最终回答。
 
 ### 3.2 P1/P2 实验
@@ -235,7 +230,7 @@ dev/test/train 三者归一化 prompt 无精确重合
 
 ---
 
-## 5. T1：DACoT-inspired Thinking cold-start
+## 5. T1：DA-CoTD-inspired Thinking cold-start
 
 ### 5.1 定位
 
@@ -277,9 +272,11 @@ data/distill/t1_thinking_rejected.jsonl
 reports/distill/t1_generation_audit.json
 ```
 
-### 5.3 DACoT-inspired 难度自适应压缩
+### 5.3 DA-CoTD-inspired 难度感知压缩
 
-本项目采用 DACoT-inspired 数据预处理，而不是新增一个独立模型分支。它只改变 T1 的
+本项目参考 `DA-CoTD: Efficient Chain-of-Thought Reasoning with Difficulty-Aware CoT-Distillation`
+（NeurIPS 2025 Workshop）的难度感知思想，将其作为 T1 数据预处理，而不是新增一个独立模型分支。
+它只改变 T1 的
 `reasoning_content` 长度，不改最终 `content`，也不改变 R0/R1/R2 的共同初始化关系。
 
 难度只能使用训练数据本身的可见信息计算，不能读取 Multi-IF dev/test：
@@ -310,11 +307,13 @@ hard：最多 512 reasoning tokens
 ```text
 data/distill/t1_thinking_raw.jsonl
 data/distill/t1_thinking_compressed.jsonl
-reports/distill/dacot_compression_audit.json
+reports/distill/da_cotd_compression_audit.json
 ```
 
-实现入口：`scripts/compress_thinking_dacot.py`。如果无法严格复现 DACoT 原论文的压缩器，
-文件、日志和报告统一使用 `DACoT-inspired`，不写成“复现 DACoT”。
+实现入口：`scripts/compress_thinking_da_cotd.py`。本项目没有复现论文的完整教师、难度估计器和训练
+设置，只借鉴“按样本难度分配 reasoning 预算”的思想。文件、日志和报告统一使用
+`DA-CoTD-inspired difficulty-aware CoT distillation`，不得写成“完整复现 DA-CoTD”。easy/medium/hard
+的 128/256/512 token 预算是本项目预注册的工程设置，不宣称来自原论文默认配置。
 
 ### 5.4 T1 训练
 
@@ -574,6 +573,31 @@ summary 至少包含：
 - 平均/总生成时间、tokens/s、峰值显存。
 - 空回答、解析失败、截断和约束 checker 异常计数。
 
+### 7.5 固定 50 条中文质量护栏
+
+Multi-IF 的程序化 checker 适合衡量可验证约束，但无法完整衡量回答是否流畅、相关、简洁，也无法
+阻止模型通过重复关键词等方式获得较高约束分。因此，在 R0 开始前额外冻结一份 50 条中文通用
+instruction 质量护栏：
+
+```text
+data/eval/chinese_quality_guardrail_50.jsonl
+reports/manifests/chinese_quality_guardrail_manifest.json
+```
+
+这 50 条不得来自 Multi-IF dev/test，也不得与 T1/RLVR 训练 prompt 精确重合。它不是新的主 benchmark，
+不用于调参、决定 P2 或替代 untouched Multi-IF test；它只负责暴露 checker 过拟合和可读性退化。
+
+R0/R1/R2 的最终评测作业在同一冻结模型、同一 vLLM 环境中顺带生成这 50 条，不额外启动模型评测
+作业。所有模型输出完成后再统一审阅，记录：
+
+- 空回答、解析失败、达到 token 上限和明显重复的比例。
+- reasoning、answer 和总 token 长度分布。
+- 固定人工 rubric 下的相关性、流畅性、完整性和无冗余情况。
+- 相比模型之间是否出现明显帮助性或可读性回退。
+
+质量护栏结果只作为安全解释和退化警报，不能与 Multi-IF 主分数加权成新的复合主指标，也不能因
+某组护栏表现不理想而隐藏该组。
+
 组 1 的 HF 表和组 2 的 vLLM 表分开报告，不做跨表绝对分数推断。
 
 ---
@@ -639,7 +663,7 @@ CUDA：<= 12.6
 | `scripts/split_multi_if_dev.py` | 固定拆分 dev/test 并生成 manifest |
 | `scripts/build_constraint_rlvr_data.py` | 构造独立可验证约束训练集 |
 | `scripts/sample_thinking_data.py` | 生成并过滤 T1 thinking 轨迹 |
-| `scripts/compress_thinking_dacot.py` | 按训练样本难度压缩 T1 reasoning_content |
+| `scripts/compress_thinking_da_cotd.py` | 按训练样本难度压缩 T1 reasoning_content |
 | `src/build_distill_dataset.py` | 用 Qwen3 template 构建 T1 cache |
 | `src/train_distill.py` | 训练 T1 cold-start adapter |
 | `src/rlvr_rewards.py` | reasoning 解析、约束 reward 与长度统计 |
@@ -647,7 +671,8 @@ CUDA：<= 12.6
 | `src/train_rlvr.py` | 统一的 GRPO/DAPO/CA-DAPO 训练入口 |
 | `src/evaluate_multi_if_vllm.py` | vLLM 多轮生成、resume 与官方评分 |
 | `tests/test_rlvr_algorithms.py` | GRPO/DAPO 公式和 CA sampler 单元测试 |
-| `reports/final_comparison.md` | 组 1/组 2 分表与最终结论 |
+| `data/eval/chinese_quality_guardrail_50.jsonl` | 固定中文质量护栏 prompt |
+| `reports/final_comparison.md` | 组 1 对比已完成，后续追加组 2 分表与最终结论 |
 
 计划统一 CLI（实现前接口，可由专家审核；当前不可运行）：
 
@@ -691,19 +716,19 @@ R1/R2 使用相同评测命令，只替换实验 ID 与 adapter 路径。
 
 ### 阶段 A：闭合组 1
 
-1. S4-HF 跑完。
-2. 验证 454 行、454 唯一 ID、冻结 SHA256 和 decoding 参数。
-3. 下载 S4 JSONL、summary、adapter 训练结果。
-4. 填写 B0/S1/S2/S3/S4 的 HF 表。
+1. S4-HF 跑完。已完成。
+2. 验证 454 行、454 唯一 ID、冻结 SHA256 和 decoding 参数。已完成。
+3. 下载 S4 JSONL、summary、adapter 训练结果。评测结果已在本机；adapter 已按 Git LFS 策略保存。
+4. 填写 B0/S1/S2/S3/S4 的 HF 表。已完成。
 
 产物：`reports/final_comparison.md` 表 A。  
-门禁：G-S4。
+门禁：G-S4 已通过。
 
 ### 阶段 B：专家审核与实现前冻结
 
-1. 专家审核本文的数据泄漏、算法归因、算力和评测方案。
-2. 修订后给 v5.x 打版本号并记录 SHA256。
-3. 才开始新增代码。
+1. 专家审核本文的数据泄漏、算法归因、算力和评测方案。第一轮已完成。
+2. 修订为 v5.3；下一步先实现并验收固定 dev/test 切分，再记录方案与 manifest SHA256。
+3. 数据边界通过后才构造训练数据；不提前实现 RL trainer。
 
 门禁：G-REVIEW。未通过不租 4090D。
 
@@ -731,7 +756,7 @@ R1/R2 使用相同评测命令，只替换实验 ID 与 adapter 路径。
 1. 100 条教师 pilot，记录速度、接受率和截断率。
 2. 估算 2k 总时长；预计超过 3 小时则降低重采样次数，不降低审计标准。
 3. 批量生成 2k accepted 原始 thinking 数据。
-4. 运行 DACoT-inspired 压缩并通过压缩审计门禁。
+4. 运行 DA-CoTD-inspired 压缩并通过压缩审计门禁。
 5. 训练 T1，评测 synthetic validation 和 failure-dev。
 
 门禁：G-T1。
@@ -794,7 +819,7 @@ sampling_stats.jsonl（R2 必须）
 - 预算有明确分配和 24 小时停止线。
 - T1 与 RL 明确使用同一 2k prompt 池，属于 warmed-up on-policy 设定。
 - HF 是默认 RL rollout backend，vLLM 只承担教师批量生成和最终评测。
-- DACoT-inspired 压缩只作为共同 T1 数据预处理，不单独增加第四个最终模型。
+- DA-CoTD-inspired 压缩只作为共同 T1 数据预处理，不单独增加第四个最终模型。
 
 ### 11.2 尚未被证明的事项
 
@@ -807,7 +832,7 @@ sampling_stats.jsonl（R2 必须）
 7. T1 不跑最终 test，节省一次评测，但因此不能直接量化 RL 相对 cold-start 的 test 增益。
 8. DAPO 的 Overlong Shaping 与 Token-Level Loss 在当前短输出任务上可能很少激活。
 9. R2 是 2k prompt/200-step 预算下的可行性验证，不能排除类别重复采样与覆盖不足。
-10. 没有未压缩长 CoT 的独立 T1 对照，不能声称 DACoT-inspired 优于 long-CoT；只能报告压缩
+10. 没有未压缩长 CoT 的独立 T1 对照，不能声称 DA-CoTD-inspired 优于 long-CoT；只能报告压缩
     比例、训练成本和共同 T1 的 dev 行为。
 
 ### 11.3 项目可以诚实声称的贡献
@@ -816,7 +841,7 @@ sampling_stats.jsonl（R2 必须）
 
 - 建立了一套可审计的中文 SFT 数据治理和受控消融流程。
 - 在相同初始化与预算下完成 GRPO 与单卡 DAPO-style 对比，并在门禁允许时验证 CA-DAPO。
-- 使用 DACoT-inspired 难度自适应 reasoning compression 降低 T1 冷启动轨迹长度；不声称其
+- 使用 DA-CoTD-inspired 难度感知 reasoning compression 降低 T1 冷启动轨迹长度；不声称其
   单独优于未压缩 long-CoT。
 - 将程序化多约束验证器用于中文指令遵循 RLVR。
 - 提出并实现一个约束类别失败率驱动的 DAPO 采样变体，并如实验证其正负结果。
@@ -840,12 +865,12 @@ sampling_stats.jsonl（R2 必须）
 | 两项 DAPO 机制在短输出上可能空转 | 接受。新增机制激活率与长度分布报告 |
 | 环境 2h 太乐观、vLLM rollout 风险高 | 接受。环境预算改为 4h，RL 默认 HF rollout，vLLM 主要用于最终评测 |
 | T1 与 RL prompt 池不明确 | 接受。明确同一 2k prompt 池的 warmed-up on-policy 设定 |
-| Thinking cold-start 可能无差别模仿冗余长 CoT | 接受。T1 增加 DACoT-inspired 难度自适应压缩；不额外增加最终模型分支 |
+| Thinking cold-start 可能无差别模仿冗余长 CoT | 接受。T1 增加 DA-CoTD-inspired 难度感知压缩；不额外增加最终模型分支 |
 
 执行优先级正式冻结为：
 
 ```text
-P0：S4-HF 闭合组 1
+P0：S4-HF 闭合组 1（已完成）
 P1：T1 + R0(GRPO) + R1(DAPO-style)
 P2：R2(CA-DAPO)，只在 P1 技术稳定、test 未打开且预算门禁通过后执行
 ```
