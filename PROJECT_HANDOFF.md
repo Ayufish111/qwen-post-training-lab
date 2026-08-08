@@ -92,7 +92,7 @@ labels = [-100] * len(prompt_ids) + input_ids[len(prompt_ids):]
 - S2 三轮均高于 S1：当前配置下 all-linear 优于 attention target。
 - S2 三轮均高于 S3：相同 2k 规模和预算下 clean 优于 raw。
 - S4 三轮均高于 B0：完整 SFT 相比 Base 有收益。
-- S4 三轮均低于 S2：clean 从 2k 增加到 10k 没有改善 Multi-IF，这是必须保留的负结果。
+- S4 三轮均低于 S2：当前 full-clean-10k/1158-step 方案没有超过精选 clean-2k/200-step S2；由于数据质量分布和训练预算同时变化，不能归因成纯规模效应。
 
 ## 4. QLoRA 配置
 

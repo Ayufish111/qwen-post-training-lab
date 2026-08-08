@@ -52,7 +52,7 @@ Qwen3 Base
 
 - S2 三轮均优于 S1：在当前配置下 all-linear 优于 attention target。
 - S2 三轮均优于 S3：在相同规模与训练预算下 clean 数据优于 raw 数据。
-- S4 三轮均低于 S2：在当前固定训练预算和评测协议下，clean 从 2k 增加到 10k 未带来提升。
+- S4 三轮均低于 S2：当前 full-clean-10k/1158-step 方案没有超过精选 clean-2k/200-step S2；该比较同时改变数据质量分布和训练预算，不是纯规模消融。
 - S4 三轮均高于 B0：完整 SFT 相比 Base 有收益。
 
 组 1 的五份评测使用同一数据文件，SHA256 为：
@@ -184,7 +184,11 @@ manifest 必须包含：
 - seed、切分算法描述和脚本版本。
 - dev/test 行数、唯一 ID 数和各自 SHA256。
 - dev/test ID 交集计数，必须为 0。
-- 归一化 prompt 重合检查结果。
+- 归一化 prompt 重合检查结果（只记录原始 benchmark 的重复，不据此修改预注册切分）。
+
+本次固定切分的实际结果为：`dev=80`、`test=374`、ID 交集 `0`；dev/test 之间有 `29` 个
+NFKC+空白归一化后的重复 prompt。后续 RLVR train 必须再与这两份集合做独立重合检查，不能因为
+dev/test 已存在重复就放宽 train 的防泄漏门禁。
 
 test 在 R0/R1/R2 模型、配置、脚本和报告模板全部冻结前不得生成答案或查看分数。
 
@@ -223,7 +227,7 @@ reports/rlvr/constraint_data_audit.md
 train = 2000 条，validation = 100 条
 所有 key 唯一
 所有 instruction_id 可被官方 checker 加载
-dev/test/train 三者归一化 prompt 无精确重合
+ RLVR train 与 dev/test 的归一化 prompt 无精确重合（dev/test 之间的原始 benchmark 重合只记录，不作为 train 门禁）
 人工抽查 100 条并记录结论
 数据文件和 manifest 均有 SHA256
 ```

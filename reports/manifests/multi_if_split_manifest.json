@@ -1,0 +1,45 @@
+{
+  "schema_version": "multi_if_split/v1",
+  "script_version": "2026-08-08",
+  "input": {
+    "path": "data/eval/multi_if_zh.csv",
+    "rows": 454,
+    "unique_ids": 454,
+    "sha256": "ce43827ef4b43c6fde34038180ed2deb4795a7aef331e187de5fd0a5da15601c"
+  },
+  "algorithm": {
+    "sort_key": "key ascending",
+    "shuffle": "random.Random(seed).shuffle",
+    "seed": 42,
+    "dev_size": 80,
+    "test_size": 374
+  },
+  "splits": {
+    "dev": {
+      "path": "data/eval/multi_if_dev.csv",
+      "ids_path": "data/eval/multi_if_dev_ids.txt",
+      "rows": 80,
+      "unique_ids": 80,
+      "duplicate_ids": 0,
+      "sha256": "b35020c22e04d78a2d4973346fce5f14869de323025d720d6f6715fc58020bb3",
+      "ids_sha256": "a3722a061688c6bcef97d8169fd1564e1bdf4659ee204fbd6a53f6d89e418c89"
+    },
+    "test": {
+      "path": "data/eval/multi_if_test.csv",
+      "ids_path": "data/eval/multi_if_test_ids.txt",
+      "rows": 374,
+      "unique_ids": 374,
+      "duplicate_ids": 0,
+      "sha256": "663afaa5855f5d46f3d22b9f776c45ddf67bc091c0f6bd78f51234a217bd2762",
+      "ids_sha256": "a0681380a539d3db155a285d7b19032c9349058a7db38cfb22393d01453aa1b3"
+    }
+  },
+  "checks": {
+    "input_duplicate_ids": 0,
+    "dev_duplicate_ids": 0,
+    "test_duplicate_ids": 0,
+    "dev_test_id_intersection_count": 0,
+    "normalized_prompt_overlap_count": 29,
+    "normalized_prompt_overlap_sha256": "041cda18b3e83dbe16a9709d97f5f7ff603e630ab11ccf6dde112d076cdab081"
+  }
+}
