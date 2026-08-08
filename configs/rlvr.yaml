@@ -172,9 +172,17 @@ constraint_sampling:
     - [detectable_format:json_format, punctuation:no_comma]
     - [detectable_format:json_format, detectable_content:number_placeholders]
     - [detectable_content:postscript, startend:end_checker]
+    - [startend:end_checker, startend:quotation]
+    - [startend:end_checker, detectable_format:json_format]
+    - [startend:end_checker, keywords:forbidden_words]
     - [combination:repeat_prompt, startend:quotation]
     - [combination:repeat_prompt, detectable_format:json_format]
+    - [combination:repeat_prompt, keywords:forbidden_words]
+    - [combination:repeat_prompt, keywords:existence]
+    - [combination:repeat_prompt, keywords:frequency]
     - [keywords:existence, keywords:forbidden_words]
+    - [keywords:frequency, keywords:forbidden_words]
+    - [keywords:existence, keywords:frequency]
     - [length_constraints:number_sentences, detectable_format:number_bullet_lists]
 
   task_bucket_allowed_constraints:
@@ -184,7 +192,7 @@ constraint_sampling:
     dialogue_roleplay: all_except_json_and_repeat_prompt
     extraction_classification: [detectable_format:json_format, detectable_format:number_bullet_lists, detectable_format:title, keywords:existence, keywords:forbidden_words, startend:end_checker]
     rewrite_summary: all_except_placeholders
-    translation: [keywords:existence, keywords:forbidden_words, length_constraints:number_sentences, length_constraints:number_words, detectable_format:title, startend:end_checker, startend:quotation, punctuation:no_comma]
+    translation: [length_constraints:number_sentences, length_constraints:number_words, detectable_format:title, startend:end_checker, startend:quotation, punctuation:no_comma]
 
 t1:
   method: DA-CoTD-inspired difficulty-aware CoT distillation

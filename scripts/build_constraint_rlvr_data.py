@@ -44,21 +44,28 @@ GENERIC_TERMS = {
 }
 
 REQUEST_PREFIX_RE = re.compile(
-    r"^(?:请问|请你|请|你能否|你能|能否|帮我|给我|我想要|我想|我们需要|我们想要)"
+    r"^(?:请求|请问|请你|请|你能否|你能|能否|帮我|给我|我想要|我想|我们需要|我们想要)"
 )
 ACTION_PREFIX_RE = re.compile(
-    r"^(?:(?:把)?这(?:句话|段话|段落)?翻译成|撰写|编写|拼写|写出|写|生成|创建|"
-    r"设计|列出|解释|说明|描述|提供|输出|讨论|分析|比较|总结|翻译|改写|回答|完成|"
-    r"制作|实现|开发)"
+    r"^(?:(?:把)?这(?:句话|段话|段落)?翻译成|撰写|编写|拼写|写下|写出|写|生成|创建|"
+    r"设计|列出|解释|说明|描述|提供|输出|讨论|探讨|分析|比较|总结|翻译|改写|回答|"
+    r"完成|制作|实现|开发|阐明|鉴赏|赞扬|赞许|归纳|推荐|指导|指点|找出|找到|研究|"
+    r"基于|给出|扩展|解析|建议)"
+)
+EXPLICIT_OUTPUT_CONSTRAINT_RE = re.compile(
+    r"(?:(?:最多|不超过|不得超过|少于|至少|不少于|多于|恰好|正好|限制在)"
+    r".{0,10}(?:个)?(?:字|词|句话|句|段落|段)|"
+    r"[\d一二三四五六七八九十]+(?:到|至|-)[\d一二三四五六七八九十]+(?:句话|句|段落|段)|"
+    r"(?:单行|一句话)(?:简介|回答|描述|总结|摘要))"
 )
 DETERMINER_PREFIX_RE = re.compile(
-    r"^(?:一篇|一段|一个|一种|一份|一些|几个|几条|五个|以下|有关)"
+    r"^(?:一篇|一段|一个|一种|一份|一些|几个|几条|五个|以下|有关|其(?!他))"
 )
 TOPIC_PREFIX_RE = re.compile(
-    r"^(?:关于|针对|围绕|例如|比如|如|包括|采用|使用|利用)"
+    r"^(?:关于|针对|围绕|例如|比如|如(?!何|此)|包括|采用|使用|利用)"
 )
 TOPIC_MARKER_RE = re.compile(
-    r"(?:关于|针对|围绕|例如|比如|如|包括|采用|使用|利用)"
+    r"(?:关于|针对|围绕|例如|比如|包括|采用|使用|利用)"
     r"([\u3400-\u9fffA-Za-z0-9_+#.·\- ]{2,24}?)"
     r"(?=的(?:文章|内容|方法|脚本|代码|方案|问题)|[，。！？；、,!?;\n]|$)"
 )
@@ -75,6 +82,10 @@ def stable_key(value: str) -> str:
 def normalize_prompt(value: str) -> str:
     value = unicodedata.normalize("NFKC", value).lower()
     return re.sub(r"\s+", " ", value).strip()
+
+
+def has_explicit_output_constraint(value: str) -> bool:
+    return bool(EXPLICIT_OUTPUT_CONSTRAINT_RE.search(value))
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -129,6 +140,7 @@ def select_sources(
     quotas = allocation(total, data["task_bucket_ratios"])
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     overlap_removed = 0
+    intrinsic_constraint_removed = 0
 
     for row in rows:
         metadata = row["metadata"]
@@ -140,6 +152,9 @@ def select_sources(
         source_prompt = normalize_prompt(row["messages"][0]["content"])
         if source_prompt in multi_if_prompts:
             overlap_removed += 1
+            continue
+        if has_explicit_output_constraint(row["messages"][0]["content"]):
+            intrinsic_constraint_removed += 1
             continue
         grouped[bucket].append(row)
 
@@ -158,7 +173,11 @@ def select_sources(
             )
         selected.extend(candidates[:required])
 
-    return selected, {"source_prompt_overlap_removed": overlap_removed, **quotas}
+    return selected, {
+        "source_prompt_overlap_removed": overlap_removed,
+        "source_intrinsic_constraint_removed": intrinsic_constraint_removed,
+        **quotas,
+    }
 
 
 def clean_prompt_term(value: str) -> str:
@@ -210,7 +229,8 @@ def prompt_term_candidates(value: str) -> set[str]:
         candidate = clean_prompt_term(candidate)
         compact = re.sub(r"\s+", " ", candidate)
         compact_length = len(compact.replace(" ", ""))
-        if not 2 <= compact_length <= 16:
+        maximum_length = 12 if re.search(r"[\u3400-\u9fff]", compact) else 24
+        if not 2 <= compact_length <= maximum_length:
             continue
         lowered = compact.lower()
         if lowered in GENERIC_TERMS or any(term in compact for term in GENERIC_TERMS):
@@ -249,7 +269,7 @@ def source_terms(
         return metadata_boost + inverse_frequency + 0.15 * len(term), len(term), term
 
     ranked = sorted(candidates, key=score, reverse=True)
-    return ranked[:12] or ["核心结论"]
+    return ranked[:12]
 
 
 def answer_end_phrase(answer: str, terms: list[str]) -> str:
@@ -267,7 +287,9 @@ def answer_end_phrase(answer: str, terms: list[str]) -> str:
     ]
     if candidates:
         return candidates[-1]
-    return f"关于{terms[0]}的说明到此结束"
+    if terms:
+        return f"关于{terms[0]}的说明到此结束"
+    return "以上说明到此结束"
 
 
 def allowed_constraints(bucket: str, sampling: dict[str, Any]) -> set[str]:
@@ -320,27 +342,43 @@ def choose_constraint_ids(
     bucket: str,
     count: int,
     current_request: str,
+    has_source_terms: bool,
     sampling: dict[str, Any],
     rng: random.Random,
 ) -> list[str]:
     allowed = allowed_constraints(bucket, sampling)
+    if not has_source_terms:
+        allowed.difference_update(
+            {
+                "keywords:existence",
+                "keywords:frequency",
+                "keywords:forbidden_words",
+            }
+        )
     repeat_limit = sampling["constraints"]["combination:repeat_prompt"][
         "maximum_source_prompt_characters"
     ]
     if len(current_request) > repeat_limit:
         allowed.discard("combination:repeat_prompt")
 
-    selected: list[str] = []
-    for _ in range(count):
-        candidates = sorted(
-            item
-            for item in allowed - set(selected)
-            if compatible(item, selected, sampling)
-        )
-        if not candidates:
-            raise ValueError(f"Cannot sample {count} compatible constraints for {bucket}")
-        selected.append(weighted_choice(candidates, sampling, rng))
-    return selected
+    maximum_attempts = int(sampling["maximum_sampling_attempts_per_prompt"])
+    for _ in range(maximum_attempts):
+        selected: list[str] = []
+        for _ in range(count):
+            candidates = sorted(
+                item
+                for item in allowed - set(selected)
+                if compatible(item, selected, sampling)
+            )
+            if not candidates:
+                break
+            selected.append(weighted_choice(candidates, sampling, rng))
+        if len(selected) == count:
+            return selected
+    raise ValueError(
+        f"Cannot sample {count} compatible constraints for {bucket} "
+        f"after {maximum_attempts} attempts"
+    )
 
 
 def constraint_instance(
@@ -362,7 +400,7 @@ def constraint_instance(
         text = spec["template"].format(keywords="、".join(keywords))
     elif instruction_id == "keywords:frequency":
         keyword = rng.choice(terms)
-        frequency = rng.randint(*spec["frequency"])
+        frequency = 1 if len(keyword) > 8 else rng.randint(*spec["frequency"])
         kwargs = {"keyword": keyword, "frequency": frequency, "relation": spec["relation"]}
         text = spec["template"].format(keyword=keyword, frequency=frequency)
     elif instruction_id == "keywords:forbidden_words":
@@ -557,6 +595,7 @@ def main() -> None:
             source["metadata"]["task_bucket"],
             int(constraint_count),
             current_request,
+            bool(source_terms(source, term_frequency, len(selected))),
             sampling,
             rng,
         )

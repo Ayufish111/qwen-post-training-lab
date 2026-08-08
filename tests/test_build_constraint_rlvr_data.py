@@ -56,6 +56,25 @@ class BuildConstraintRlvrDataTest(unittest.TestCase):
         translation = builder.prompt_term_candidates("帮我把这句话翻译成文言文")
         self.assertEqual(translation, {"文言文"})
 
+        urgent = builder.prompt_term_candidates("有什么事如此急迫")
+        self.assertNotIn("此急迫", urgent)
+
+        how = builder.prompt_term_candidates("如何对社会做出最有利的贡献")
+        self.assertNotIn("何对社会做出最有利的贡献", how)
+
+        self.assertEqual(
+            builder.prompt_term_candidates(
+                "创建一个包含20世纪出版的5本经典书籍的列表"
+            ),
+            set(),
+        )
+        self.assertEqual(
+            builder.prompt_term_candidates("给出一个自然现象，请求解释其基本原理\n彩虹"),
+            {"自然现象", "基本原理", "彩虹"},
+        )
+        self.assertTrue(builder.has_explicit_output_constraint("最多50个字"))
+        self.assertTrue(builder.has_explicit_output_constraint("写一个单行简介"))
+
         multiple_choice = builder.prompt_term_candidates(
             "某建筑队借用A建筑公司的资质，以\nA. 有效\nB. 可撤销\nC. 无效\nD. 效力待定"
         )
@@ -104,6 +123,9 @@ class BuildConstraintRlvrDataTest(unittest.TestCase):
             self.assertEqual(len(validation_rows), 100)
             self.assertEqual(len(review_rows), 100)
             self.assertEqual(manifest["status"], "pending_manual_review")
+            self.assertGreater(
+                manifest["checks"]["source_intrinsic_constraint_removed"], 0
+            )
             self.assertEqual(len({row["id"] for row in all_rows}), 2100)
             self.assertEqual(
                 len({row["metadata"]["source_id"] for row in all_rows}), 2100
@@ -114,6 +136,16 @@ class BuildConstraintRlvrDataTest(unittest.TestCase):
                 2: ["user", "assistant", "user"],
                 3: ["user", "assistant", "user", "assistant", "user"],
             }
+            forbidden_pairs = [
+                set(pair)
+                for pair in config["constraint_sampling"]["forbidden_pairs"]
+            ]
+            exclusive_groups = [
+                set(group)
+                for group in config["constraint_sampling"][
+                    "mutually_exclusive_groups"
+                ]
+            ]
             checker_module = builder.load_official_checker()
             for row in all_rows:
                 roles = [message["role"] for message in row["messages"]]
@@ -125,9 +157,17 @@ class BuildConstraintRlvrDataTest(unittest.TestCase):
                 self.assertEqual(
                     len(row["instruction_ids"]), row["metadata"]["constraint_count"]
                 )
+                selected = set(row["instruction_ids"])
+                self.assertTrue(
+                    all(not pair <= selected for pair in forbidden_pairs)
+                )
+                self.assertTrue(
+                    all(len(group & selected) <= 1 for group in exclusive_groups)
+                )
                 for instruction_id, kwargs in zip(
                     row["instruction_ids"], row["kwargs"]
                 ):
+                    self.assertNotIn("核心结论", json.dumps(kwargs, ensure_ascii=False))
                     checker = checker_module.INSTRUCTION_DICT[instruction_id](
                         instruction_id
                     )

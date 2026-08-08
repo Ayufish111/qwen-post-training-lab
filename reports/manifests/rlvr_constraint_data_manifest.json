@@ -4,7 +4,7 @@
   "seed": 42,
   "config": {
     "path": "C:/Users/A/Desktop/ai/TRANSFORMERS/qwen_post_training_lab/configs/rlvr.yaml",
-    "sha256": "429d901aea2422f7dd4ad26bc25016945de60a12a1171d1f33adcb68879f7d8d"
+    "sha256": "d9080877cd3a05b4e156ba4385dea6d5b29b7a0434dfb848d36d5991191bd841"
   },
   "source": {
     "path": "data/sft/full_clean_10000.jsonl",
@@ -14,17 +14,17 @@
     "train": {
       "path": "data/rlvr/constraint_train_2000.jsonl",
       "rows": 2000,
-      "sha256": "6d703f7f51ed11cd1d82b1027bc1202705031015fd5e52f38a7b4a6153eafc49"
+      "sha256": "baf8921b881a60efa0cb56919522b8840d31d5817d1ce26ebd371315cfc2b423"
     },
     "validation": {
       "path": "data/rlvr/constraint_validation_100.jsonl",
       "rows": 100,
-      "sha256": "2b4d3301888ebab5a60724d54ce1693fd353e57b5ed870ad660b04f624b4fe40"
+      "sha256": "ac11d42aac4a8f5ea6423822131fc0b6cbb32a9c13da99f945821a8c000efa08"
     },
     "manual_review": {
       "path": "data/rlvr/manual_review_queue_100.jsonl",
       "rows": 100,
-      "sha256": "3d8ecfd657a12dde4beabb75c40a744f54e96209a5988cca3d73d3c3654b71bf"
+      "sha256": "2347db6356d58e8de85a9decd99c4e1528275c387da4a1f634389e2d3b5bd17e"
     }
   },
   "counts": {
@@ -48,29 +48,30 @@
       "3": 420
     },
     "instruction_ids": {
-      "combination:repeat_prompt": 41,
-      "combination:two_responses": 83,
-      "detectable_content:number_placeholders": 57,
-      "detectable_content:postscript": 62,
-      "detectable_format:json_format": 80,
-      "detectable_format:multiple_sections": 129,
-      "detectable_format:number_bullet_lists": 262,
-      "detectable_format:number_highlighted_sections": 207,
-      "detectable_format:title": 397,
-      "keywords:existence": 374,
-      "keywords:forbidden_words": 357,
-      "keywords:frequency": 280,
-      "length_constraints:nth_paragraph_first_word": 124,
-      "length_constraints:number_paragraphs": 219,
-      "length_constraints:number_sentences": 239,
-      "length_constraints:number_words": 259,
-      "punctuation:no_comma": 173,
-      "startend:end_checker": 356,
-      "startend:quotation": 186
+      "combination:repeat_prompt": 34,
+      "combination:two_responses": 80,
+      "detectable_content:number_placeholders": 65,
+      "detectable_content:postscript": 73,
+      "detectable_format:json_format": 52,
+      "detectable_format:multiple_sections": 160,
+      "detectable_format:number_bullet_lists": 293,
+      "detectable_format:number_highlighted_sections": 246,
+      "detectable_format:title": 462,
+      "keywords:existence": 267,
+      "keywords:forbidden_words": 247,
+      "keywords:frequency": 169,
+      "length_constraints:nth_paragraph_first_word": 125,
+      "length_constraints:number_paragraphs": 250,
+      "length_constraints:number_sentences": 272,
+      "length_constraints:number_words": 287,
+      "punctuation:no_comma": 196,
+      "startend:end_checker": 390,
+      "startend:quotation": 217
     }
   },
   "checks": {
     "source_prompt_overlap_removed": 0,
+    "source_intrinsic_constraint_removed": 46,
     "general_instruction": 735,
     "knowledge_qa": 672,
     "creative_writing": 147,
