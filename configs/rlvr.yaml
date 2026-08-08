@@ -1,0 +1,207 @@
+version: 1
+status: data_design_frozen_environment_pending
+seed: 42
+
+model:
+  primary: Qwen/Qwen3-4B-Base
+  fallback: Qwen/Qwen3-1.7B-Base
+  fallback_gate: all_rlvr_runs_switch_together_after_4b_smoke_oom_or_over_budget
+
+evaluation_boundary:
+  source: data/eval/multi_if_zh.csv
+  source_sha256: ce43827ef4b43c6fde34038180ed2deb4795a7aef331e187de5fd0a5da15601c
+  dev: data/eval/multi_if_dev.csv
+  dev_sha256: b35020c22e04d78a2d4973346fce5f14869de323025d720d6f6715fc58020bb3
+  dev_size: 80
+  test: data/eval/multi_if_test.csv
+  test_sha256: 663afaa5855f5d46f3d22b9f776c45ddf67bc091c0f6bd78f51234a217bd2762
+  test_size: 374
+  test_policy: no_generation_or_score_inspection_until_r0_r1_r2_are_frozen
+
+data:
+  source: data/sft/full_clean_10000.jsonl
+  train_output: data/rlvr/constraint_train_2000.jsonl
+  validation_output: data/rlvr/constraint_validation_100.jsonl
+  manifest_output: reports/manifests/rlvr_constraint_data_manifest.json
+  audit_output: reports/rlvr/constraint_data_audit.md
+  train_size: 2000
+  validation_size: 100
+  minimum_quality_score: 52.0
+  manual_audit_size: 100
+  exact_prompt_overlap_with_multi_if_required: 0
+
+  task_bucket_ratios:
+    general_instruction: 0.35
+    knowledge_qa: 0.32
+    creative_writing: 0.07
+    dialogue_roleplay: 0.10
+    extraction_classification: 0.07
+    rewrite_summary: 0.06
+    translation: 0.03
+
+  context_turn_ratios:
+    1: 0.70
+    2: 0.20
+    3: 0.10
+
+  context_construction:
+    one_turn: append_constraints_to_source_user_prompt
+    two_turn: source_user_source_answer_then_constrained_revision_request
+    three_turn: source_pair_then_fixed_acknowledgement_bridge_then_constrained_revision_request
+    bridge_user: 请保留上面回答的主题，并准备根据下一条要求重新作答。
+    bridge_assistant: 好的，我会保留原主题，并按照你的下一条要求重新作答。
+    rewarded_completion: final_assistant_only
+
+constraint_sampling:
+  constraints_per_prompt_ratios:
+    1: 0.35
+    2: 0.45
+    3: 0.20
+  maximum_sampling_attempts_per_prompt: 50
+
+  constraints:
+    keywords:existence:
+      weight: 1.0
+      template: 你的回答必须包含以下关键词：{keywords}。
+      keyword_count: [1, 3]
+      value_source: source_answer_terms
+
+    keywords:frequency:
+      weight: 0.8
+      template: 你的回答中“{keyword}”必须至少出现 {frequency} 次。
+      frequency: [1, 3]
+      relation: at least
+      value_source: source_answer_terms
+
+    keywords:forbidden_words:
+      weight: 1.0
+      template: 你的回答不能包含以下词语：{forbidden_words}。
+      forbidden_word_count: [1, 3]
+      value_source: source_answer_terms
+
+    length_constraints:number_sentences:
+      weight: 0.8
+      less_than: [5, 10]
+      at_least: [3, 6]
+      templates:
+        less_than: 你的回答必须少于 {num_sentences} 句话。
+        at_least: 你的回答必须至少包含 {num_sentences} 句话。
+
+    length_constraints:number_words:
+      weight: 0.7
+      less_than: [120, 300]
+      at_least: [80, 180]
+      templates:
+        less_than: 你的回答必须少于 {num_words} 个字。
+        at_least: 你的回答必须至少包含 {num_words} 个字。
+
+    length_constraints:number_paragraphs:
+      weight: 0.8
+      num_paragraphs: [2, 4]
+      template: 你的回答必须包含 {num_paragraphs} 个段落，段落之间用三个星号（***）分隔。
+
+    length_constraints:nth_paragraph_first_word:
+      weight: 0.4
+      num_paragraphs: [2, 4]
+      first_words: [首先, 其次, 最后, 总之]
+      template: 你的回答必须有 {num_paragraphs} 个段落，第 {nth_paragraph} 段必须以“{first_word}”开头，段落之间用两个换行符分隔。
+
+    detectable_content:number_placeholders:
+      weight: 0.4
+      num_placeholders: [1, 3]
+      template: 你的回答必须包含至少 {num_placeholders} 个用方括号标记的占位符，例如[姓名]。
+
+    detectable_content:postscript:
+      weight: 0.2
+      postscript_markers: [附言, 备注]
+      template: 你的回答末尾必须包含以“{postscript_marker}”开头的附言。
+
+    detectable_format:number_bullet_lists:
+      weight: 0.8
+      num_bullets: [3, 6]
+      template: 你的回答必须包含恰好 {num_bullets} 个 Markdown 星号项目符号。
+
+    detectable_format:number_highlighted_sections:
+      weight: 0.6
+      num_highlights: [2, 4]
+      template: 你的回答必须用双星号标出恰好 {num_highlights} 个重点，例如**重点**。
+
+    detectable_format:multiple_sections:
+      weight: 0.5
+      section_splitter: 部分
+      num_sections: [2, 4]
+      template: 你的回答必须包含至少 {num_sections} 个部分，并使用“部分1”“部分2”这样的标题。
+
+    detectable_format:json_format:
+      weight: 0.5
+      template: 整个回答必须是可以被解析的 JSON；可以放在 Markdown JSON 代码块中。
+
+    detectable_format:title:
+      weight: 1.0
+      template: 你的回答必须包含一个用双角括号括起来的标题，例如<<标题>>。
+
+    combination:two_responses:
+      weight: 0.3
+      template: 请给出两个不同版本的回答，并用六个星号（******）分隔。
+
+    combination:repeat_prompt:
+      weight: 0.2
+      maximum_source_prompt_characters: 120
+      template: 首先逐字重复原始请求，然后再给出答案；重复前不要添加任何内容。
+
+    startend:end_checker:
+      weight: 0.8
+      template: 你的回答必须以“{end_phrase}”结尾，之后不能再有其他文字。
+      value_source: source_answer_sentence
+
+    startend:quotation:
+      weight: 0.6
+      template: 整个回答必须放在一对英文双引号中。
+
+    punctuation:no_comma:
+      weight: 0.5
+      template: 你的回答不能包含逗号。
+
+  mutually_exclusive_groups:
+    - [detectable_format:json_format, length_constraints:number_paragraphs, length_constraints:nth_paragraph_first_word, detectable_format:number_bullet_lists, detectable_format:multiple_sections, combination:two_responses, combination:repeat_prompt]
+    - [length_constraints:number_paragraphs, length_constraints:nth_paragraph_first_word, detectable_format:number_bullet_lists, detectable_format:multiple_sections, combination:two_responses]
+
+  forbidden_pairs:
+    - [detectable_format:json_format, detectable_format:title]
+    - [detectable_format:json_format, punctuation:no_comma]
+    - [detectable_format:json_format, detectable_content:number_placeholders]
+    - [detectable_content:postscript, startend:end_checker]
+    - [combination:repeat_prompt, startend:quotation]
+    - [combination:repeat_prompt, detectable_format:json_format]
+    - [keywords:existence, keywords:forbidden_words]
+    - [length_constraints:number_sentences, detectable_format:number_bullet_lists]
+
+  task_bucket_allowed_constraints:
+    general_instruction: all
+    knowledge_qa: all_except_placeholders_and_json
+    creative_writing: all_except_json
+    dialogue_roleplay: all_except_json_and_repeat_prompt
+    extraction_classification: [detectable_format:json_format, detectable_format:number_bullet_lists, detectable_format:title, keywords:existence, keywords:forbidden_words, startend:end_checker]
+    rewrite_summary: all_except_placeholders
+    translation: [keywords:existence, keywords:forbidden_words, length_constraints:number_sentences, length_constraints:number_words, detectable_format:title, startend:end_checker, startend:quotation, punctuation:no_comma]
+
+t1:
+  method: DA-CoTD-inspired difficulty-aware CoT distillation
+  claim_boundary: project_specific_reasoning_budgets_not_full_paper_reproduction
+  reasoning_token_budgets:
+    easy: 128
+    medium: 256
+    hard: 512
+  shared_initialization_for: [R0, R1, R2]
+
+rlvr:
+  train_steps: 200
+  completions_per_prompt: 4
+  maximum_completion_tokens: 512
+  seed: 42
+  rollout_backend: hf
+  final_evaluation_backend: vllm
+  algorithms:
+    R0: grpo
+    R1: dapo-style
+    R2: ca-dapo
