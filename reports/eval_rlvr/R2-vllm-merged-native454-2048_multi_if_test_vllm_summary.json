@@ -1,0 +1,65 @@
+{
+  "suite": "Multi-IF Chinese",
+  "backend": "vllm",
+  "experiment_id": "R2-vllm-merged-native454-2048",
+  "model": "/root/autodl-tmp/merged_models/R2",
+  "adapter": null,
+  "deployment_mode": "merged_model",
+  "rows": 454,
+  "data_sha256": "ce43827ef4b43c6fde34038180ed2deb4795a7aef331e187de5fd0a5da15601c",
+  "data_rows_requested": 454,
+  "decoding": {
+    "enable_thinking": true,
+    "reasoning_parser": "qwen3_compatible_text_extraction",
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "skip_special_tokens": false,
+    "max_new_tokens": 2048,
+    "multi_turn_history": "final_content_only",
+    "answer_only_fallback": false
+  },
+  "metrics": {
+    "turn_1": {
+      "prompts": 454,
+      "instructions": 610,
+      "strict_prompt_accuracy": 0.4185022026431718,
+      "strict_instruction_accuracy": 0.5,
+      "loose_prompt_accuracy": 0.44933920704845814,
+      "loose_instruction_accuracy": 0.5278688524590164,
+      "official_overall_average": 0.4739275655376616
+    },
+    "turn_2": {
+      "prompts": 454,
+      "instructions": 1064,
+      "strict_prompt_accuracy": 0.31057268722466963,
+      "strict_instruction_accuracy": 0.5357142857142857,
+      "loose_prompt_accuracy": 0.34801762114537443,
+      "loose_instruction_accuracy": 0.5554511278195489,
+      "official_overall_average": 0.43743893047596966
+    },
+    "turn_3": {
+      "prompts": 454,
+      "instructions": 1518,
+      "strict_prompt_accuracy": 0.14317180616740088,
+      "strict_instruction_accuracy": 0.43412384716732544,
+      "loose_prompt_accuracy": 0.18502202643171806,
+      "loose_instruction_accuracy": 0.45718050065876153,
+      "official_overall_average": 0.30487454510630146
+    }
+  },
+  "generation": {
+    "total_seconds": 14837.662130557,
+    "mean_seconds": 10.89402505914611,
+    "mean_generated_tokens": 809.6042584434655,
+    "total_generated_tokens": 1102681,
+    "clipped_count": 342,
+    "empty_count": 370,
+    "answer_only_fallback_attempt_count": 0,
+    "answer_only_fallback_used_count": 0,
+    "primary_clipped_count": 342,
+    "primary_empty_count": 370,
+    "primary_unclosed_thinking_count": 296
+  },
+  "official_repo_revision": null,
+  "elapsed_seconds": 14866.326228633523
+}

@@ -1,10 +1,8 @@
-"""Generate auditable Qwen3 thinking trajectories for the T1 cold-start.
+"""为 T1 cold-start 生成可审计的 Qwen3 教师 Thinking 轨迹。
 
-The script deliberately keeps teacher generation separate from T1 training:
-the raw assistant continuation is parsed into reasoning_content and final
-content, and only the final content is checked against the official
-Multi-IF-compatible checker. Existing JSONL files are never overwritten
-unless --resume is supplied.
+教师生成和 T1 训练被刻意分成两个步骤：先把模型原始续写拆成 reasoning_content（思考）与
+content（最终回答），再只用最终回答运行 Multi-IF 兼容的官方约束检查。除非显式传入
+`--resume`，否则脚本不会覆盖已有 JSONL，避免丢失长时间生成的结果。
 """
 
 from __future__ import annotations
@@ -15,6 +13,7 @@ import importlib
 import json
 import sys
 import time
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +22,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_DIR))
+
+from src.rlvr_rewards import parse_reasoning_answer as parse_thinking_continuation
+
+
 DEFAULT_INPUT = PROJECT_DIR / "data" / "rlvr" / "constraint_train_2000.jsonl"
 DEFAULT_RAW = PROJECT_DIR / "data" / "distill" / "t1_thinking_raw.jsonl"
 DEFAULT_ACCEPTED = PROJECT_DIR / "data" / "distill" / "t1_thinking_accepted.jsonl"
@@ -50,7 +54,7 @@ def append_jsonl(handle, row: dict[str, Any]) -> None:
 
 
 def difficulty_bucket(row: dict[str, Any], *, first_pass: bool | None = None, attempts: int = 0) -> str:
-    """Assign the frozen easy/medium/hard bucket from visible train metadata."""
+    """只根据训练样本可见元数据划分冻结的 easy/medium/hard 档位。"""
 
     metadata = row.get("metadata") or {}
     constraints = int(metadata.get("constraint_count", len(row.get("instruction_ids", []))))
@@ -67,27 +71,6 @@ def difficulty_bucket(row: dict[str, Any], *, first_pass: bool | None = None, at
     return "hard"
 
 
-def parse_thinking_continuation(decoded: str) -> tuple[str, str] | None:
-    """Return (reasoning_content, content) from a Qwen3 continuation.
-
-    Qwen3 puts the opening think marker in the prompt when
-    enable_thinking=True, so generated text normally starts with reasoning and
-    contains only the closing marker. The parser accepts both forms to make
-    the smoke test diagnose template/version mismatches explicitly.
-    """
-
-    text = decoded.strip()
-    text = text.replace("<|im_end|>", "").replace("<|endoftext|>", "").strip()
-    if "</think>" not in text:
-        return None
-    reasoning, answer = text.split("</think>", 1)
-    reasoning = reasoning.replace("<think>", "", 1).strip()
-    answer = answer.strip()
-    if not reasoning or not answer:
-        return None
-    return reasoning, answer
-
-
 def load_official_ifeval(repo_path: Path):
     if not (repo_path / "ifeval.py").exists():
         raise FileNotFoundError(f"Official checker not found: {repo_path / 'ifeval.py'}")
@@ -99,14 +82,28 @@ def load_official_ifeval(repo_path: Path):
     return ifeval
 
 
-def check_constraints(ifeval, response: str, instruction_ids: list[str], kwargs: list[dict[str, Any]]) -> list[bool]:
+def check_constraints(
+    ifeval,
+    response: str,
+    instruction_ids: list[str],
+    kwargs: list[dict[str, Any]],
+) -> tuple[list[bool], str | None]:
     results = []
     for index, instruction_id in enumerate(instruction_ids):
-        instruction_class = ifeval.INSTRUCTION_DICT[instruction_id]
-        instruction = instruction_class(instruction_id)
-        instruction.build_description(**kwargs[index])
-        results.append(bool(response.strip() and instruction.check_following(response)))
-    return results
+        try:
+            instruction_class = ifeval.INSTRUCTION_DICT[instruction_id]
+            instruction = instruction_class(instruction_id)
+            instruction.build_description(**kwargs[index])
+            passed = bool(
+                response.strip() and instruction.check_following(response)
+            )
+        except Exception as error:
+            detail = (
+                f"{instruction_id}: {type(error).__name__}: {error}"
+            )
+            return [False] * len(instruction_ids), detail
+        results.append(passed)
+    return results, None
 
 
 def build_model(model_name: str, revision: str, trust_remote_code: bool):
@@ -148,7 +145,8 @@ def generate_once(tokenizer, model, messages: list[dict[str, Any]], max_new_toke
         enable_thinking=True,
         return_tensors="pt",
     )
-    if isinstance(encoded, dict):
+    # 不同 Transformers 版本可能返回普通 dict 或 BatchEncoding，这里统一转成模型输入字典。
+    if isinstance(encoded, Mapping):
         model_inputs = dict(encoded)
     else:
         model_inputs = {"input_ids": encoded}
@@ -177,7 +175,8 @@ def load_existing_ids(path: Path) -> set[str]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--teacher", default="Qwen/Qwen3-4B-Instruct")
+    # Qwen3 的 instruct/thinking 混合 checkpoint 是 Qwen/Qwen3-4B；不存在 Qwen3-4B-Instruct 仓库。
+    parser.add_argument("--teacher", default="Qwen/Qwen3-4B")
     parser.add_argument("--revision", default="main")
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--raw-output", type=Path, default=DEFAULT_RAW)
@@ -226,6 +225,7 @@ def main() -> None:
     accepted_count = rejected_count = 0
     attempts_total = 0
     truncations = 0
+    checker_errors = 0
     reasoning_tokens = []
     answer_tokens = []
     started = time.perf_counter()
@@ -256,7 +256,7 @@ def main() -> None:
                     last_error = "missing_or_empty_thinking_delimiter"
                     continue
                 reasoning, answer = parsed
-                instruction_results = check_constraints(
+                instruction_results, checker_error = check_constraints(
                     ifeval, answer, row["instruction_ids"], row["kwargs"]
                 )
                 reasoning_count = len(tokenizer.encode(reasoning, add_special_tokens=False))
@@ -286,12 +286,17 @@ def main() -> None:
                         "generated_tokens": generated_count,
                         "prompt_tokens": prompt_count,
                         "strict_results": instruction_results,
+                        "checker_error": checker_error,
                         "first_pass": attempt == 0,
                         "attempts": row_attempts,
                         "difficulty": difficulty_bucket(row, first_pass=attempt == 0, attempts=attempt),
                         "truncated": was_truncated,
                     },
                 }
+                if checker_error is not None:
+                    checker_errors += 1
+                    last_error = "official_checker_error"
+                    break
                 if was_truncated:
                     last_error = "max_new_tokens_reached"
                     continue
@@ -309,6 +314,11 @@ def main() -> None:
                     "metadata": row.get("metadata", {}),
                     "attempts": row_attempts,
                     "reason": last_error,
+                    "checker_error": (
+                        last_candidate["teacher"].get("checker_error")
+                        if last_candidate is not None
+                        else None
+                    ),
                 }
                 append_jsonl(rejected_file, rejected)
                 rejected_count += 1
@@ -337,6 +347,7 @@ def main() -> None:
         "attempts_total_new": attempts_total,
         "retry_rate_new": (attempts_total - accepted_count - rejected_count) / attempts_total if attempts_total else 0.0,
         "truncations_new": truncations,
+        "checker_errors_new": checker_errors,
         "reasoning_tokens_mean_new": sum(reasoning_tokens) / len(reasoning_tokens) if reasoning_tokens else None,
         "answer_tokens_mean_new": sum(answer_tokens) / len(answer_tokens) if answer_tokens else None,
         "generation_seconds_new": time.perf_counter() - started,

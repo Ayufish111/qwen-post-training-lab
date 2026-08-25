@@ -1,1 +1,0 @@
-OK: ['pythainlp', 'langdetect', 'emoji', 'nltk']

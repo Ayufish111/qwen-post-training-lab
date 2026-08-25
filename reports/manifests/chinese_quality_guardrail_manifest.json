@@ -1,0 +1,70 @@
+{
+  "schema_version": "chinese_quality_guardrail/v1",
+  "status": "frozen_before_r0",
+  "purpose": "readability_and_helpfulness_regression_guardrail_not_a_benchmark",
+  "seed": 42,
+  "selection": {
+    "source_task_bucket_quotas": {
+      "code": 5,
+      "creative_writing": 6,
+      "dialogue_roleplay": 5,
+      "extraction_classification": 5,
+      "general_instruction": 7,
+      "knowledge_qa": 7,
+      "math_reasoning": 6,
+      "rewrite_summary": 5,
+      "translation": 4
+    },
+    "quota_basis": "upstream_heuristic_labels_not_manual_ground_truth",
+    "minimum_quality_score": 52.0,
+    "prompt_character_range": [
+      20,
+      1500
+    ],
+    "reference_answers_included": false,
+    "manual_prompt_exclusions": {
+      "7163655": "source sentence is already in the requested progressive form",
+      "3347798": "translation target language is not specified",
+      "3427272": "claims Dutch input but provides Chinese text",
+      "5268267": "asks to replace a verb without providing the source sentence"
+    }
+  },
+  "source": {
+    "path": "C:/Users/A/Desktop/ai/TRANSFORMERS/qwen_post_training_lab/data/sft/full_clean_10000.jsonl",
+    "sha256": "0df5919f5ade41dffd5e19f6c7c69cf12d82b95bba21f9c3cdeec6e8b7fff03d"
+  },
+  "output": {
+    "path": "C:/Users/A/Desktop/ai/TRANSFORMERS/qwen_post_training_lab/data/eval/chinese_quality_guardrail_50.jsonl",
+    "rows": 50,
+    "sha256": "edd1819169801ade2999e7984953adff9bb13f5f23e9b8079687b8831b8c9e2d"
+  },
+  "script": {
+    "path": "C:/Users/A/Desktop/ai/TRANSFORMERS/qwen_post_training_lab/scripts/build_chinese_quality_guardrail.py",
+    "sha256": "0696821f878752714d2db330e8f427d70c8aaa70033c22f89c1421c602fdfff7"
+  },
+  "counts": {
+    "categories": {
+      "code": 5,
+      "creative_writing": 6,
+      "dialogue_roleplay": 5,
+      "extraction_classification": 5,
+      "general_instruction": 7,
+      "knowledge_qa": 7,
+      "math_reasoning": 6,
+      "rewrite_summary": 5,
+      "translation": 4
+    },
+    "unique_ids": 50,
+    "unique_source_ids": 50,
+    "unique_prompts": 50
+  },
+  "checks": {
+    "rlvr_source_id_overlap": 0,
+    "multi_if_normalized_prompt_overlap": 0
+  },
+  "evaluation_policy": {
+    "does_not_affect_primary_score": true,
+    "not_used_for_tuning_or_p2_decision": true,
+    "outputs_reviewed_only_after_all_compared_models_finish": true
+  }
+}

@@ -1,8 +1,28 @@
 """CPU-only tests for the T1 teacher-generation contract."""
 
 import unittest
+import re
 
-from scripts.sample_thinking_data import difficulty_bucket, parse_thinking_continuation
+from scripts.sample_thinking_data import (
+    check_constraints,
+    difficulty_bucket,
+    parse_thinking_continuation,
+)
+
+
+class RaisingInstruction:
+    def __init__(self, instruction_id: str) -> None:
+        self.instruction_id = instruction_id
+
+    def build_description(self, **kwargs) -> None:
+        pass
+
+    def check_following(self, response: str) -> bool:
+        raise re.error("nothing to repeat")
+
+
+class RaisingIfeval:
+    INSTRUCTION_DICT = {"keywords:existence": RaisingInstruction}
 
 
 class SampleThinkingDataTest(unittest.TestCase):
@@ -25,6 +45,16 @@ class SampleThinkingDataTest(unittest.TestCase):
         self.assertEqual(difficulty_bucket(easy), "easy")
         self.assertEqual(difficulty_bucket(hard), "hard")
         self.assertEqual(difficulty_bucket(easy, first_pass=False, attempts=2), "medium")
+
+    def test_checker_exception_is_returned_instead_of_crashing(self) -> None:
+        results, error = check_constraints(
+            RaisingIfeval,
+            "answer",
+            ["keywords:existence"],
+            [{"keywords": ["+invalid"]}],
+        )
+        self.assertEqual(results, [False])
+        self.assertIn("keywords:existence: error", error)
 
 
 if __name__ == "__main__":

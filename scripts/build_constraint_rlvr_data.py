@@ -1,4 +1,4 @@
-"""Build the frozen, independently sourced RLVR constraint prompt dataset."""
+"""从独立来源构造并冻结 RLVR 约束 prompt 训练集。"""
 
 from __future__ import annotations
 
@@ -196,7 +196,7 @@ def clean_prompt_term(value: str) -> str:
 
 
 def prompt_term_candidates(value: str) -> set[str]:
-    """Extract readable prompt phrases without arbitrary CJK character windows."""
+    """提取可读的 prompt 关键词，不使用随意截取汉字窗口的做法。"""
     raw_candidates: set[str] = set()
     raw_candidates.update(
         re.findall(r"[“\"《]([^”\"》]{2,24})[”\"》]", value)

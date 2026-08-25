@@ -1,0 +1,65 @@
+{
+  "suite": "Multi-IF Chinese",
+  "backend": "vllm",
+  "experiment_id": "R0-vllm-merged-native454-2048",
+  "model": "/root/autodl-tmp/merged_models/R0",
+  "adapter": null,
+  "deployment_mode": "merged_model",
+  "rows": 454,
+  "data_sha256": "ce43827ef4b43c6fde34038180ed2deb4795a7aef331e187de5fd0a5da15601c",
+  "data_rows_requested": 454,
+  "decoding": {
+    "enable_thinking": true,
+    "reasoning_parser": "qwen3_compatible_text_extraction",
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "skip_special_tokens": false,
+    "max_new_tokens": 2048,
+    "multi_turn_history": "final_content_only",
+    "answer_only_fallback": false
+  },
+  "metrics": {
+    "turn_1": {
+      "prompts": 454,
+      "instructions": 610,
+      "strict_prompt_accuracy": 0.42731277533039647,
+      "strict_instruction_accuracy": 0.5065573770491804,
+      "loose_prompt_accuracy": 0.45374449339207046,
+      "loose_instruction_accuracy": 0.5262295081967213,
+      "official_overall_average": 0.4784610384920922
+    },
+    "turn_2": {
+      "prompts": 454,
+      "instructions": 1064,
+      "strict_prompt_accuracy": 0.29295154185022027,
+      "strict_instruction_accuracy": 0.5169172932330827,
+      "loose_prompt_accuracy": 0.31938325991189426,
+      "loose_instruction_accuracy": 0.5366541353383458,
+      "official_overall_average": 0.41647655758338575
+    },
+    "turn_3": {
+      "prompts": 454,
+      "instructions": 1518,
+      "strict_prompt_accuracy": 0.13656387665198239,
+      "strict_instruction_accuracy": 0.4268774703557312,
+      "loose_prompt_accuracy": 0.15418502202643172,
+      "loose_instruction_accuracy": 0.44598155467720685,
+      "official_overall_average": 0.29090198092783803
+    }
+  },
+  "generation": {
+    "total_seconds": 15147.996289655566,
+    "mean_seconds": 11.121876864651664,
+    "mean_generated_tokens": 822.6850220264317,
+    "total_generated_tokens": 1120497,
+    "clipped_count": 348,
+    "empty_count": 359,
+    "answer_only_fallback_attempt_count": 0,
+    "answer_only_fallback_used_count": 0,
+    "primary_clipped_count": 348,
+    "primary_empty_count": 359,
+    "primary_unclosed_thinking_count": 291
+  },
+  "official_repo_revision": null,
+  "elapsed_seconds": 15185.524070776999
+}

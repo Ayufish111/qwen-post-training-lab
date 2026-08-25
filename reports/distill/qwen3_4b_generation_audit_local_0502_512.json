@@ -1,0 +1,103 @@
+{
+  "schema_version": "t1_generation_audit/v1",
+  "model": "C:\\Users\\A\\.cache\\huggingface\\hub\\models--Qwen--Qwen3-4B\\snapshots\\1cfa9a7208912126459214e8b04321603b3df60c",
+  "adapter": null,
+  "split": "t1_train",
+  "row_id": "rlvr-0502",
+  "teacher_completion_tokens": 354,
+  "teacher_forced_eos_probability": 0.9999866486487003,
+  "teacher_forced_eos_rank": 1,
+  "structure_targets": [
+    {
+      "position": 41,
+      "relative_position": 0,
+      "token_id": 151667,
+      "token": "<think>",
+      "probability": 0.9999885559736865,
+      "rank": 1
+    },
+    {
+      "position": 42,
+      "relative_position": 1,
+      "token_id": 198,
+      "token": "\\n",
+      "probability": 1.0,
+      "rank": 1
+    },
+    {
+      "position": 43,
+      "relative_position": 2,
+      "token_id": 99692,
+      "token": "\\u597d\\u7684",
+      "probability": 0.9565701343741083,
+      "rank": 1
+    },
+    {
+      "position": 44,
+      "relative_position": 3,
+      "token_id": 3837,
+      "token": "\\uff0c",
+      "probability": 0.9999885559736865,
+      "rank": 1
+    },
+    {
+      "position": 45,
+      "relative_position": 4,
+      "token_id": 20002,
+      "token": "\\u7528\\u6237",
+      "probability": 0.9449840601107923,
+      "rank": 1
+    },
+    {
+      "position": 46,
+      "relative_position": 5,
+      "token_id": 104029,
+      "token": "\\u8ba9\\u6211",
+      "probability": 0.9915103935857048,
+      "rank": 1
+    },
+    {
+      "position": 47,
+      "relative_position": 6,
+      "token_id": 53481,
+      "token": "\\u63cf\\u8ff0",
+      "probability": 1.0,
+      "rank": 1
+    },
+    {
+      "position": 48,
+      "relative_position": 7,
+      "token_id": 46944,
+      "token": "\\u4e00\\u4e2a",
+      "probability": 0.5585278105149802,
+      "rank": 1
+    },
+    {
+      "position": 222,
+      "relative_position": 181,
+      "token_id": 151668,
+      "token": "</think>",
+      "probability": 0.9999713901797765,
+      "rank": 1
+    },
+    {
+      "position": 393,
+      "relative_position": 352,
+      "token_id": 151645,
+      "token": "<|im_end|>",
+      "probability": 0.9999866486487003,
+      "rank": 1
+    }
+  ],
+  "generated_tokens": 383,
+  "terminated_with_im_end": true,
+  "do_sample": false,
+  "seed": 42,
+  "generation_tokens": {
+    "eos_token": "<|im_end|>",
+    "eos_token_id": 151645,
+    "pad_token": "<|endoftext|>",
+    "pad_token_id": 151643
+  },
+  "decoded": "<think>\n好的，用户让我描述一个老虎的外貌特征，而且必须用恰好四个Markdown星号项目符号。首先，我需要确定老虎的主要外貌特征。老虎是大型猫科动物，所以体型应该作为重点。然后，毛发的颜色和图案，比如条纹和斑点，这是老虎的显著特征。接下来是面部特征，比如眼睛和耳朵，还有嘴巴的形状。最后，可能要考虑体型的细节，比如尾巴的长度和四肢的结构。\n\n用户可能需要这些信息用于教育、写作或者艺术创作。他们可能希望得到准确且全面的描述，但必须严格控制在四个点。需要确保每个项目符号都涵盖关键点，同时不重复。比如，第一个点可以讲体型和毛发，第二个讲条纹和斑点，第三个讲面部特征，第四个讲尾巴和四肢。这样每个点都覆盖不同的方面，确保信息全面。同时，要检查是否符合Markdown格式，没有使用其他符号，每个点前都有星号，且数量正好四个。可能用户需要这些信息来制作图表、写文章或者教学材料，所以准确性和清晰度很重要。需要避免使用专业术语，保持描述简洁明了。最后再检查一遍是否符合所有要求，特别是数量和格式。\n</think>\n\n* 体型强壮，体长可达3米，体重约150-250公斤，肌肉发达，四肢粗壮  \n* 身体覆盖浓密黑色短毛，腹部为白色，面部有显著的金黄色条纹与斑点  \n* 眼睛呈琥珀色，耳廓圆钝，嘴巴宽大，獠牙外露，爪子锋利  \n* 尾巴长且蓬松，末端有黑色毛发，整体轮廓威武，毛色与条纹具有极强的伪装性<|im_end|>"
+}

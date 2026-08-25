@@ -1,0 +1,103 @@
+{
+  "schema_version": "t1_generation_audit/v1",
+  "model": "C:\\Users\\A\\.cache\\huggingface\\hub\\models--Qwen--Qwen3-4B-Base\\snapshots\\906bfd4b4dc7f14ee4320094d8b41684abff8539",
+  "adapter": "C:\\Users\\A\\Desktop\\ai\\TRANSFORMERS\\qwen_post_training_lab\\outputs\\distill\\T1\\final_adapter",
+  "split": "t1_train",
+  "row_id": "rlvr-0502",
+  "teacher_completion_tokens": 354,
+  "teacher_forced_eos_probability": 0.000383573906109413,
+  "teacher_forced_eos_rank": 47,
+  "structure_targets": [
+    {
+      "position": 41,
+      "relative_position": 0,
+      "token_id": 151667,
+      "token": "<think>",
+      "probability": 0.00039252183331992484,
+      "rank": 30
+    },
+    {
+      "position": 42,
+      "relative_position": 1,
+      "token_id": 198,
+      "token": "\\n",
+      "probability": 0.9999961853100103,
+      "rank": 1
+    },
+    {
+      "position": 43,
+      "relative_position": 2,
+      "token_id": 99692,
+      "token": "\\u597d\\u7684",
+      "probability": 0.9925132130494052,
+      "rank": 1
+    },
+    {
+      "position": 44,
+      "relative_position": 3,
+      "token_id": 3837,
+      "token": "\\uff0c",
+      "probability": 0.9998970084778191,
+      "rank": 1
+    },
+    {
+      "position": 45,
+      "relative_position": 4,
+      "token_id": 20002,
+      "token": "\\u7528\\u6237",
+      "probability": 0.966744433989344,
+      "rank": 1
+    },
+    {
+      "position": 46,
+      "relative_position": 5,
+      "token_id": 104029,
+      "token": "\\u8ba9\\u6211",
+      "probability": 0.9762092020837906,
+      "rank": 1
+    },
+    {
+      "position": 47,
+      "relative_position": 6,
+      "token_id": 53481,
+      "token": "\\u63cf\\u8ff0",
+      "probability": 0.9999771120783387,
+      "rank": 1
+    },
+    {
+      "position": 48,
+      "relative_position": 7,
+      "token_id": 46944,
+      "token": "\\u4e00\\u4e2a",
+      "probability": 0.42737971549446047,
+      "rank": 2
+    },
+    {
+      "position": 222,
+      "relative_position": 181,
+      "token_id": 151668,
+      "token": "</think>",
+      "probability": 0.00039265811600171566,
+      "rank": 25
+    },
+    {
+      "position": 393,
+      "relative_position": 352,
+      "token_id": 151645,
+      "token": "<|im_end|>",
+      "probability": 0.000383573906109413,
+      "rank": 47
+    }
+  ],
+  "generated_tokens": 1,
+  "terminated_with_im_end": false,
+  "do_sample": false,
+  "seed": 42,
+  "generation_tokens": {
+    "eos_token": "<|im_end|>",
+    "eos_token_id": 151645,
+    "pad_token": "<|endoftext|>",
+    "pad_token_id": 151643
+  },
+  "decoded": "مفاوض"
+}

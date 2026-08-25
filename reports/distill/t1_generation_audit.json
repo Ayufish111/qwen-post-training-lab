@@ -1,0 +1,30 @@
+{
+  "schema_version": "t1_teacher_generation/v1",
+  "status": "completed",
+  "teacher": "Qwen/Qwen3-4B",
+  "revision": "main",
+  "input": "C:\\Users\\A\\Desktop\\ai\\TRANSFORMERS\\qwen_post_training_lab\\data\\rlvr\\constraint_train_2000.jsonl",
+  "input_sha256": "baf8921b881a60efa0cb56919522b8840d31d5817d1ce26ebd371315cfc2b423",
+  "requested_rows": 2000,
+  "accepted_rows_new": 609,
+  "rejected_rows_new": 237,
+  "attempts_total_new": 1415,
+  "retry_rate_new": 0.4021201413427562,
+  "truncations_new": 104,
+  "checker_errors_new": 0,
+  "reasoning_tokens_mean_new": 329.76026272577997,
+  "answer_tokens_mean_new": 187.94745484400656,
+  "generation_seconds_new": 44061.843327300005,
+  "settings": {
+    "enable_thinking": true,
+    "max_new_tokens": 1024,
+    "max_retries": 2,
+    "do_sample": true,
+    "compute_dtype": "bfloat16"
+  },
+  "outputs": {
+    "raw": "C:\\Users\\A\\Desktop\\ai\\TRANSFORMERS\\qwen_post_training_lab\\data\\distill\\t1_thinking_raw.jsonl",
+    "accepted": "C:\\Users\\A\\Desktop\\ai\\TRANSFORMERS\\qwen_post_training_lab\\data\\distill\\t1_thinking_accepted.jsonl",
+    "rejected": "C:\\Users\\A\\Desktop\\ai\\TRANSFORMERS\\qwen_post_training_lab\\data\\distill\\t1_thinking_rejected.jsonl"
+  }
+}

@@ -1,9 +1,10 @@
 version: 1
-status: data_design_frozen_environment_pending
+status: t1_v2_structure_repair_pending
 seed: 42
 
 model:
   primary: Qwen/Qwen3-4B-Base
+  teacher: Qwen/Qwen3-4B
   fallback: Qwen/Qwen3-1.7B-Base
   fallback_gate: all_rlvr_runs_switch_together_after_4b_smoke_oom_or_over_budget
 
@@ -54,6 +55,15 @@ data:
     rewarded_completion: final_assistant_only
 
 constraint_sampling:
+  ema_beta: 0.9
+  uniform_mixture_lambda: 0.5
+  min_sampling_weight: 0.5
+  max_sampling_weight: 2.0
+  sampling_weight_update_steps: 20
+  fast_ema_beta: 0.5
+  stagnation_tolerance: 0.02
+  stagnation_patience: 3
+  stagnation_scale: 0.25
   constraints_per_prompt_ratios:
     1: 0.35
     2: 0.45
@@ -195,22 +205,132 @@ constraint_sampling:
     translation: [length_constraints:number_sentences, length_constraints:number_words, detectable_format:title, startend:end_checker, startend:quotation, punctuation:no_comma]
 
 t1:
-  method: DA-CoTD-inspired difficulty-aware CoT distillation
-  claim_boundary: project_specific_reasoning_budgets_not_full_paper_reproduction
-  reasoning_token_budgets:
-    easy: 128
-    medium: 256
-    hard: 512
-  shared_initialization_for: [R0, R1, R2]
+  method: qwen3-thinking-cold-start
+  teacher: Qwen/Qwen3-4B
+  input: data/distill/t1_thinking_accepted.jsonl
+  cache: data/cache/t1_qwen3_4b_1024
+  accepted_rows: 1461
+  max_seq_length: 1024
+  validation_ratio: 0.05
+  objective_filters:
+    - non_empty_reasoning
+    - complete_reasoning_delimiter
+    - not_truncated
+    - official_constraint_check_passed
+    - no_severe_repetition_loop
+  reasoning_compression: disabled
+  deprecated_compression_prototype: scripts/compress_thinking_da_cotd.py
+  qlora:
+    load_in_4bit: true
+    quant_type: nf4
+    double_quant: true
+    # Transformer 仍只训练七类线性层；T1_v2 额外精确训练三个结构 token 行，
+    # 避免整张 lm_head LoRA 扰乱 15 万词表并产生异常字符。
+    target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+    # T1_v2 通过 PEFT trainable_token_indices 训练 tied embedding/output 行。
+    legacy_target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+    r: 16
+    lora_alpha: 32
+    lora_dropout: 0.05
+    # 这三个 token 同时用于选择性训练 tied token 行和加权结构损失。
+    structure_token_strings: ["<think>", "</think>", "<|im_end|>"]
+    # 每个结构 token 的监督权重为普通 completion token 的 4 倍，并按总权重
+    # 重新归一化；避免旧版额外 0.25 CE 将短短三个结构位置放大几十倍而坍缩。
+    structure_token_loss_multiplier: 4.0
+  training:
+    legacy_output_dir: outputs/distill/T1
+    output_dir: outputs/distill/T1_v2
+    max_steps: 200
+    per_device_train_batch_size: 2
+    per_device_eval_batch_size: 2
+    gradient_accumulation_steps: 8
+    learning_rate: 0.0002
+    lr_scheduler_type: linear
+    warmup_ratio: 0.05
+    logging_steps: 10
+    eval_steps: 50
+    save_steps: 50
+  legacy_generation_gate: failed_free_generation_structure
+  generation_gate:
+    status: pending
+    audit_rows: [rlvr-0502, rlvr-1486]
+    max_new_tokens: 1024
+    require_think_open: true
+    require_think_close: true
+    require_natural_im_end: true
+    minimum_parse_ok_ratio: 1.0
+  rlvr_usage: blocked_until_t1_v2_generation_gate_passes
 
 rlvr:
+  train_input: data/rlvr/constraint_train_2000.jsonl
+  validation_input: data/rlvr/constraint_validation_100.jsonl
+  initialization: existing_adapter
+  initial_adapter: outputs/distill/T1_v2/final_adapter
+  blocked_until_t1_v2_generation_gate: true
+  qlora:
+    target_modules: all-linear
+    r: 16
+    lora_alpha: 32
+    lora_dropout: 0.05
+  output_root: outputs/rlvr
   train_steps: 200
   completions_per_prompt: 4
-  maximum_completion_tokens: 512
+  maximum_prompt_tokens: 512
+  # Qwen3-4B 直接初始化保留完整 thinking 轨迹；1024 为所有组共用上限。
+  maximum_completion_tokens: 1024
+  temperature: 0.8
+  top_p: 0.95
+  learning_rate: 0.000001
+  gradient_checkpointing: true
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 8
+  logging_steps: 1
+  save_steps: 50
+  save_total_limit: 2
+  symmetric_clip_epsilon: 0.2
+  clip_higher_epsilon_low: 0.2
+  clip_higher_epsilon_high: 0.28
+  overlong_buffer_tokens: 64
+  # 不为制造 reward 差异而重生成或筛选回答。连续 8 个训练批完全没有 advantage 时停机，
+  # 该健康门禁对 R0/R1/R2 完全一致，不改变官方 checker、reward 或样本分布。
+  zero_variance_abort_patience: 8
+  zero_variance_tolerance: 0.00000001
+  zero_variance_policy: accept_all_batches_abort_on_consecutive_zero_signal
+  kl_beta: 0.0
   seed: 42
   rollout_backend: hf
+  # Qwen3-4B 原生 thinking 模板已通过自由生成结构审计；reward 仍只检查最终 answer。
+  rollout_enable_thinking: true
+  # 仅用于 2-step GPU smoke。这是固定的结构、checker、reward 方差和反向传播诊断集；
+  # smoke 仍必须用实际生成结果通过全部门禁，不预先宣称成功。
+  # 正式 R0/R1/R2 完全忽略此列表，始终读取完整 2000 条训练池。
+  smoke_selection_policy: qwen3_4b_seed42_verified_diagnostics_v4
+  smoke_prompt_ids:
+    - rlvr-0062
+    - rlvr-0502
+    - rlvr-0286
+    - rlvr-0210
+    - rlvr-1386
+    - rlvr-1517
+    - rlvr-1117
+    - rlvr-0192
   final_evaluation_backend: vllm
   algorithms:
-    R0: grpo
-    R1: dapo-style
-    R2: ca-dapo
+    R0:
+      name: grpo
+      clip_higher: false
+      token_level_loss: false
+      soft_overlong_penalty: false
+      constraint_aware_sampling: false
+    R1:
+      name: dapo-style
+      clip_higher: true
+      token_level_loss: true
+      soft_overlong_penalty: true
+      constraint_aware_sampling: false
+    R2:
+      name: ca-dapo
+      clip_higher: true
+      token_level_loss: true
+      soft_overlong_penalty: true
+      constraint_aware_sampling: true

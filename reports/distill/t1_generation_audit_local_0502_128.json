@@ -1,0 +1,21 @@
+{
+  "schema_version": "t1_generation_audit/v1",
+  "model": "C:\\Users\\A\\.cache\\huggingface\\hub\\models--Qwen--Qwen3-4B-Base\\snapshots\\906bfd4b4dc7f14ee4320094d8b41684abff8539",
+  "adapter": "C:\\Users\\A\\Desktop\\ai\\TRANSFORMERS\\qwen_post_training_lab\\outputs\\distill\\T1\\final_adapter",
+  "split": "t1_train",
+  "row_id": "rlvr-0502",
+  "teacher_completion_tokens": 354,
+  "teacher_forced_eos_probability": 0.000383573906109413,
+  "teacher_forced_eos_rank": 47,
+  "generated_tokens": 128,
+  "terminated_with_im_end": false,
+  "do_sample": false,
+  "seed": 42,
+  "generation_tokens": {
+    "eos_token": "<|im_end|>",
+    "eos_token_id": 151645,
+    "pad_token": "<|endoftext|>",
+    "pad_token_id": 151643
+  },
+  "decoded": "مفاوض\n好的，用户让我描述老虎的外貌特征，而且需要恰好四个Markdown星号项目符号。首先，我得确定老虎的主要外貌特点。老虎是大型猫科动物，体型庞大，毛色通常是橙色或黄色，带有黑色条纹。这些条纹是独特的，每只老虎的条纹图案都不一样，就像人类的指纹一样。\n\n接下来，我需要确保每个项目符号都准确且不重复。第一个点应该提到体型和毛色，比如“体型庞大，毛色橙黄，带有黑色条纹”。然后，老虎的条纹是独特的，所以第二个"
+}

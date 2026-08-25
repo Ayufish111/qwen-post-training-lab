@@ -34,3 +34,16 @@ b0_eval_backup.tar.gz
 .DS_Store
 Thumbs.db
 
+
+# Local training logs and generated document artifacts.
+*.log
+*.err.log
+*.docx
+
+# Large local RLVR/distillation model outputs are not GitHub source artifacts.
+# Keep manifests and evaluation reports under reports/ instead.
+outputs/distill/
+outputs/rlvr/
+outputs/rlvr/*.tar.gz
+outputs/rlvr/*.sha256
+reports/packages/

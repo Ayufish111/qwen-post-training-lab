@@ -1,4 +1,4 @@
-"""Freeze a deterministic development/test split for the Multi-IF CSV."""
+"""按固定 seed 切分并冻结 Multi-IF 开发集与最终测试集。"""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ def sha256_file(path: Path) -> str:
 
 
 def normalized_prompt(value: str) -> str:
-    """Normalize Unicode and whitespace for a leakage diagnostic only."""
+    """只为泄漏检查统一 Unicode 和空白，不改变实际评测文本。"""
 
     return re.sub(r"\s+", " ", unicodedata.normalize("NFKC", value)).strip()
 

@@ -1,0 +1,46 @@
+{
+  "schema_version": "t1_training_audit/v1",
+  "status": "training_completed_dev_evaluation_pending",
+  "experiment": "T1",
+  "base_model": "Qwen/Qwen3-4B-Base",
+  "hardware": "NVIDIA GeForce RTX 4090 D",
+  "dataset": {
+    "cache": "data/cache/t1_qwen3_4b_1024",
+    "train_rows": 1273,
+    "validation_rows": 67,
+    "max_seq_length": 1024
+  },
+  "training": {
+    "global_step": 200,
+    "epoch": 2.5023547880690735,
+    "train_loss": 0.6884491980075836,
+    "train_runtime_seconds": 1462.373,
+    "train_samples_per_second": 2.188,
+    "train_steps_per_second": 0.137,
+    "best_checkpoint_step": 150,
+    "best_eval_loss": 0.6710118651390076
+  },
+  "artifacts": {
+    "final_adapter": "outputs/distill/T1/final_adapter",
+    "adapter_sha256": "85f5de7a6ed0b92747ff0f5eefd63bde4cd9e5f00fb0b1ffa4bb477822ef3c3e",
+    "adapter_tensor_count": 504,
+    "trainer_state": "outputs/distill/T1/trainer_state.json",
+    "trainer_state_sha256": "d316f14e57cbd82338f5135d54bd958c8185302bde09002ec2af9b1049bf3e94",
+    "train_results_sha256": "dbdb24894d33f9711e27e1657d6f106f31f80b526170125278149a14e271284b",
+    "eval_results_sha256": "e34452426c3825c2b43da5f0ec7f55929fd10d97871ef6814914546b0b83a4e7",
+    "resolved_config_sha256": "dbbcb58ef848dda1e3b8f3e8441a4ef6a23ad0abaaa5d896e0615d180a6abce5",
+    "training_log": "reports/distill/T1_train.log",
+    "source_archive": "T1_final_20260811.tar.gz",
+    "source_archive_sha256": "f9dd36dd166611147a010ca3028516245a05b5209802f860a153aeb8d3798602"
+  },
+  "validation": {
+    "archive_hash_match": true,
+    "adapter_hash_match": true,
+    "safetensors_parse_ok": true,
+    "adapter_reload_smoke_ok": true,
+    "adapter_reload_scope": "same training code and architecture validated by the pre-run T1 smoke",
+    "synthetic_validation_completed": false,
+    "failure_dev_completed": false,
+    "untouched_test_opened": false
+  }
+}

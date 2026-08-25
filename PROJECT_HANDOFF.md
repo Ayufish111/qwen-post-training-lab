@@ -1,6 +1,6 @@
 # Qwen3 中文后训练项目交接说明
 
-> 更新时间：2026-08-08
+> 更新时间：2026-08-14
 >
 > 用途：新开 Codex 对话时，让新对话先阅读本文件，再继续项目。本文记录已确认事实、当前状态和下一步，不代表所有任务均已完成。
 
@@ -12,13 +12,15 @@
 C:\Users\A\Desktop\ai\TRANSFORMERS\qwen_post_training_lab
 ```
 
-基于 `Qwen/Qwen3-4B-Base` 完成中文通用指令后训练工程闭环：
+以 `Qwen/Qwen3-4B-Base` 完成 SFT 消融，并以原生 thinking 结构正常的
+`Qwen/Qwen3-4B` 作为 RLVR 公共起点，完成中文通用指令后训练工程闭环：
 
 1. Infinity-Instruct 数据治理与可审计清洗。
 2. 4-bit QLoRA SFT。
 3. LoRA target、数据质量、数据规模三组控制变量实验。
 4. Multi-IF 中文多轮指令跟随评测与错误分析。
-5. SFT 闭环后，使用共同 Thinking cold-start 初始化，做 GRPO、DAPO-style 与条件执行的 CA-DAPO 受控 RLVR 对比。
+5. 保留 T1 cold-start 的负结果；R0/R1/R2 统一从 `Qwen3-4B + 同种子新 LoRA`
+   出发，做 GRPO、DAPO-style 与条件执行的 CA-DAPO 受控 RLVR 对比。
 6. 整理 README、GitHub、简历和面试深挖材料。
 
 项目定位是完整、可复现的后训练工程研究，不包装成论文级通用算法创新。
@@ -170,22 +172,50 @@ ce43827ef4b43c6fde34038180ed2deb4795a7aef331e187de5fd0a5da15601c
 组 1 的 P0/G-S4 已闭合。组 2 固定主线为：
 
 ```text
-Qwen3 Base
-  -> T1：2k DA-CoTD-inspired 难度感知 Thinking cold-start
-      -> R0：GRPO
-      -> R1：单卡 DAPO-style reproduction
-      -> R2：CA-DAPO（仅在 P2 预算与稳定性门禁通过时）
+Qwen3-4B-Base -> T1（保留为自由生成结构失败的负结果，不进入 RL）
+
+Qwen3-4B + seed=42 的同配置新 LoRA
+  -> R0：GRPO
+  -> R1：单卡 DAPO-style reproduction
+  -> R2：CA-DAPO（仅在 P2 预算与稳定性门禁通过时）
 ```
 
-当前唯一实现阶段是先冻结数据边界，不训练 T1，也不编写 RL trainer：
+数据边界、2k RLVR 训练池、100 条人工审核和教师生成均已完成。当前实测状态：
 
-1. 将 454 条 Multi-IF 按 `seed=42` 固定切成 failure-dev 80 条与 untouched test 374 条。
-2. 输出两份 CSV、两份 ID 清单和包含 SHA256/交集检查的 manifest。
-3. 确认 dev/test ID 无交集，并保证 T1/RL 训练数据不使用任何 Multi-IF 原题或 ID。
-4. 完成专家审核与配置冻结后，才构造独立的 2k RLVR 约束训练数据。
+1. 教师生成 2000 条已结束：1461 accepted、539 rejected，原始解析候选 1970 条。
+2. accepted reasoning 中位数约 317 tokens、均值约 340 tokens；prompt 结构难度与 reasoning 长度
+   Pearson 相关系数为 `-0.0007`，easy/medium/hard 中位数约为 `322/310/317`。
+3. 压缩原型的 2 条 rewrite smoke 虽通过最终答案 checker，但首次 smoke 暴露过复制最终答案问题；
+   checker 也不能证明改写后 reasoning 正确。因此 `scripts/compress_thinking_da_cotd.py` 已退出主线，
+   仅作为 deprecated prototype 保留，不执行正式压缩。
+4. CA-DAPO sampler 已改为“进步率 × 学习前沿”：快 EMA 与慢 EMA 的正差值乘 `4p(1-p)`；连续
+   3 次更新变化不超过 `0.02` 时 progress 乘 `0.25`。仍保留 EMA、50% 均匀混合、权重裁剪和每 20 step 更新。
+5. T1 cache 已构建并验收：1461 条 accepted 中保留 1340 条，121 条完整序列超过 1024 后过滤；
+   固定切分为 1273 train / 67 validation。两侧 ID 唯一、交集为 0，序列长度、attention mask、labels
+   和 prompt `-100` mask 检查均无错误。
+6. 本机 RTX 3070 Ti Laptop 8GB 的独立 2 条/1-step smoke 已通过：train loss `1.6353`、eval loss
+   `1.5630`，adapter 保存与重载成功。实测单步训练 `291.26 s`，显存峰值约 `7919/8192 MiB`、GPU
+   温度 `87 C`；因此代码门禁通过，但本机长时间正式训练的硬件门禁不通过。
+7. 正式 200-step T1 已在 AutoDL RTX 4090 D 上完成：训练 `1462.37 s`、train loss `0.68845`，
+   最低 eval loss `0.67101` 出现在 checkpoint-150；Trainer 在结束时恢复该最佳权重并保存为
+   `outputs/distill/T1/final_adapter`。产物已下载到本机，adapter SHA256 为
+   `85f5de7a6ed0b92747ff0f5eefd63bde4cd9e5f00fb0b1ffa4bb477822ef3c3e`，504 个 safetensors
+   tensor 可正常解析。完整审计见 `reports/distill/t1_training_audit.json`。
+8. 后续自由生成审计否定了 T1 作为 RL 初始化：`Base + T1 LoRA` 在教师强制下的
+   loss 和产物完整性正常，但 `<think>`、`</think>`、`<|im_end|>` 概率极低，自由生成
+   128/512/1024 token 均不自然终止。旧 T1 和旧 R0 smoke 仅作失败审计证据，不恢复、不续训。
+9. 同一训练/验证样本上，直接 `Qwen3-4B` 的三个结构 token 教师强制概率均接近 1、rank=1，
+   采样生成在 383 token 自然以 `<|im_end|>` 结束，且可被奖励解析器完整拆分。
+10. RLVR 已改为直接加载 `Qwen3-4B`、在 seed=42 下新建 all-linear LoRA。奖励从原始
+    `completion_ids` 保留特殊 token 解码；smoke 强制检查解析率、自然终止、reward 方差、
+    checker 错误和 LoRA 权重变化。截至 2026-08-14，73 个 RLVR 定向测试和 R0 preflight 已通过；
+    新路线的 CUDA 反向集成 smoke 尚未执行，不得宣称 RLVR 已修好。untouched test 继续封存。
+11. 本机直接 Qwen3-4B 的四回答探针已确认 `rlvr-0062` 自然产生 reward
+    `[1.0, 0.4667, 0.4667, 0.4667]`，4 条均可解析、自然终止，checker 错误为 0。它已放在
+    smoke 列表首位；这只优化集成测试覆盖，正式训练仍使用未筛选的 2000 条全量池。
 
-详细方案和预算门禁见 `reports/post_sft_upgrade_plan.md`。不得在模型、脚本和配置全部冻结前查看
-untouched test 分数。
+详细协议、命令和预算门禁见 `reports/post_sft_upgrade_plan.md`。untouched test 继续封存，不得因 T1
+结果调整最终 test 数据或评测规则。
 
 ## 7. 已解决或易复发的故障
 
@@ -197,6 +227,8 @@ untouched test 分数。
 - CMD 不能使用 PowerShell 的 `$env:`、`&` 和反引号续行；先看终端提示符再给命令。
 - 远程连接断开不会影响 `screen` 内任务，但普通前台进程可能终止。
 - 不要因中断删除 JSONL；使用 `--resume` 接着跑。
+- 教师强制 loss 下降和 adapter 可重载，不等于自由生成可用；必须单独检查结构 token 和自然终止。
+- 旧 `outputs/rlvr/R0*` 使用失败 T1 初始化，不得 `--resume`。新 smoke 必须使用空输出目录。
 
 ## 8. 关键文件
 
@@ -209,6 +241,12 @@ reports/sft_data_audit.md
 reports/final_comparison.md
 reports/post_sft_upgrade_plan.md
 reports/eval/*_summary.json
+data/distill/t1_thinking_accepted.jsonl
+src/build_distill_dataset.py
+src/train_distill.py
+tests/test_build_distill_dataset.py
+scripts/compress_thinking_da_cotd.py（deprecated prototype）
+tests/test_compress_thinking_da_cotd.py（原型回归测试）
 src/train_sft.py
 src/evaluate_multi_if.py
 ```
@@ -289,7 +327,7 @@ AutoTokenizer.from_pretrained
 从零理解 GPT/nanoGPT
 -> Hugging Face 常规微调与 Trainer
 -> 当前 Qwen3 QLoRA SFT 消融
--> DA-CoTD-inspired Thinking cold-start
+-> 可审计 Thinking cold-start
 -> GRPO / DAPO-style / CA-DAPO 受控 RLVR 对比
 -> 后续再单独设计 Agent 项目
 ```
