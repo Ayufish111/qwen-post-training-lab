@@ -1,104 +1,134 @@
-# Qwen3 中文后训练实验
+# Qwen3 Post-Training Lab
 
-这个项目研究三个问题：数据清洗是否有效、LoRA 挂载范围如何影响效果、
-最终 10,000 条 SFT 数据能把 Base 模型提升到什么程度。
+A reproducible post-training study for `Qwen3-4B-Base` focused on Chinese instruction following. The repository combines controlled SFT ablations, teacher-guided reasoning cold start, constraint-based RLVR, merged-model vLLM deployment, and auditable Multi-IF evaluation.
 
-## 实验设计
+## Scope
 
-| 实验 | 是否训练 | 数据 | LoRA target | 目的 |
-|---|---|---|---|---|
-| B0 | 否 | 无 | 无 | Base 模型基线 |
-| S1 | 是 | clean 2,000 | `q/k/v/o` | 注意力投影方案 |
-| S2 | 是 | 同一份 clean 2,000 | `all-linear` | 全线性层方案 |
-| S3 | 是 | raw 2,000 | S1/S2 胜者 | 数据质量消融 |
-| S4 | 是 | full clean 10,000 | S1/S2 胜者 | 最终 SFT |
+The project evaluates three parts of the post-training pipeline:
 
-S1 和 S2 只改变 LoRA target。S3 与胜出的 clean 实验只改变数据质量；
-两份 2,000 条数据的问题不重复，但任务类型和长度分布完全匹配。
+- SFT data quality, dataset size, and LoRA target modules.
+- Teacher distillation for stabilizing Qwen3 thinking/answer structure before RLVR.
+- GRPO, DAPO-style, and constraint-aware DAPO (CA-DAPO) under a fixed RLVR protocol.
 
-## 目录
+The primary benchmark is the 454-row Multi-IF Chinese multi-turn instruction-following suite. All formal R0/R1/R2 evaluations use the same data hash and deterministic native vLLM decoding.
+
+## Results
+
+### SFT ablation
+
+| Run | Configuration | Turn 1 | Turn 2 | Turn 3 | Mean |
+|---|---|---:|---:|---:|---:|
+| B0 | Qwen3-4B-Base | 0.404528 | 0.204584 | 0.160707 | 0.256606 |
+| S1 | Clean 2k, attention LoRA | 0.469344 | 0.340690 | 0.231513 | 0.347182 |
+| S2 | Clean 2k, all-linear LoRA | 0.501450 | 0.348407 | 0.235692 | **0.361849** |
+| S3 | Raw 2k, all-linear LoRA | 0.453707 | 0.306988 | 0.203443 | 0.321379 |
+| S4 | Clean 10k, all-linear LoRA | 0.449160 | 0.324287 | 0.229305 | 0.334251 |
+
+The controlled comparison favors all-linear LoRA and clean data in this setup. The 10k run does not outperform the matched clean 2k run, so the results do not support a simple “more data is always better” claim.
+
+### Formal RLVR comparison
+
+| Run | Algorithm | Turn 1 | Turn 2 | Turn 3 | Mean |
+|---|---|---:|---:|---:|---:|
+| R0 | GRPO | 0.478461 | 0.416477 | 0.290902 | 0.395280 |
+| R1 | DAPO-style | **0.483289** | **0.448247** | 0.288128 | **0.406555** |
+| R2 | CA-DAPO | 0.473928 | 0.437439 | **0.304875** | 0.405414 |
+
+R1 has the highest three-turn mean, while R2 has the strongest third-turn score. The gain over GRPO is approximately one percentage point and should be treated as a small single-seed result rather than a general algorithmic claim.
+
+## Pipeline
+
+1. Build and audit SFT and RLVR datasets.
+2. Run B0/S1-S4 controlled SFT experiments.
+3. Generate and filter teacher reasoning trajectories.
+4. Train the `T1_v2` reasoning cold-start adapter and verify its generation gate.
+5. Train R0/R1/R2 from the same cold-start initialization.
+6. Merge adapters and run deterministic native vLLM evaluation.
+7. Audit JSONL integrity, strict/loose checker results, clipping, empty outputs, and thinking structure.
+
+## Repository Layout
 
 ```text
-configs/project.yaml          实验参数
-data/sft/                     仅保留三份冻结的原始训练数据
-data/cache/                   预处理产生的 tokenized 缓存
-src/build_sft_datasets.py     清洗并构造三份数据
-src/preprocess_sft.py         95/5 切分、套 Qwen 模板、构造 labels
-src/train_sft.py              QLoRA 训练 S1-S4
-scripts/prepare_multi_if.py   冻结 Multi-IF 中文正式评测集
-src/evaluate_multi_if.py      Multi-IF 中文多轮规则评测
-src/evaluate_instruction.py   20 条本地冒烟检查（非正式评测）
-scripts/validate_dataset.py   数据和 labels 质量门禁
-reports/                      审计报告与实验协议
-outputs/                      checkpoint、adapter 和训练指标
+configs/                     Experiment and RLVR configuration
+data/                       Frozen datasets and audited training data
+outputs/sft/                 SFT metrics and Git-LFS adapters
+outputs/rlvr/*/manifest.json RLVR provenance manifests
+reports/eval/                B0/S1-S4 evaluation results
+reports/eval_rlvr/           Formal R0/R1/R2 JSONL and summaries
+reports/distill/             Distillation audits and generation gates
+reports/rlvr/                RLVR data audits and validation reports
+scripts/                     Dataset, training, audit, and deployment entry points
+src/                         Training, reward, sampling, merge, and evaluation code
+tests/                       Unit and contract tests
 ```
 
-`data/sft/` 只有：
+Large local RLVR/distillation checkpoints, generated logs, smoke runs, and deployment bundles are intentionally excluded from the public source tree. Evaluation summaries and provenance manifests are included so the reported results remain auditable.
 
-```text
-full_clean_10000.jsonl
-ablation_clean_2000.jsonl
-ablation_raw_2000.jsonl
-```
+## Reproduction
 
-## 执行顺序
+The commands below assume a local model snapshot and the dependencies required by the selected backend (`transformers`, `peft`, `trl`, `datasets`, `bitsandbytes`, and optionally `vllm`). GPU training and vLLM evaluation are recommended.
 
-本地已经完成第 1-5 步；当前从第 6 步继续。
+### SFT baseline and ablations
 
-```powershell
-# 1. 构造三份冻结数据；已有最终文件时会确定性重分配
-#    删除最终文件且无临时候选缓存时，才会流式读取 ModelScope 7M
+```bash
 python src/build_sft_datasets.py
-
-# 2. 校验行数、schema、重复、集合关系和消融分布
 python scripts/validate_dataset.py
-
-# 3. 完成固定 100 条人工抽检，可中途退出后继续
 python scripts/audit_sft.py
-
-# 4. 审核通过后进行 token 化
 python src/preprocess_sft.py
-
-# 5. 再次校验，包含 input_ids/attention_mask/labels
-python scripts/validate_dataset.py
+python src/train_sft.py --experiment S1
+python src/train_sft.py --experiment S2
+python src/train_sft.py --experiment S3
+python src/train_sft.py --experiment S4
 ```
 
-两次校验都通过并接受审计边界后，将 `configs/project.yaml` 中的
-`current_sft_status` 改成 `approved`。接着冻结正式评测集：
+Run the HF Multi-IF evaluator after preparing the frozen benchmark:
 
-```powershell
-# 6. 本地只执行一次：下载并冻结 Multi-IF 中文评测集
+```bash
 python scripts/prepare_multi_if.py
-```
-
-在 AutoDL 中克隆 Meta 官方规则代码，并只安装本地评分需要的依赖：
-
-```powershell
-git clone https://github.com/facebookresearch/Multi-IF.git third_party/Multi-IF
-pip install nltk pythainlp langdetect emoji
-
-# 7. 先用 2 题确认 B0 推理链路，再去掉 --limit 运行完整中文集
-python src/evaluate_multi_if.py --experiment-id B0 --limit 2
 python src/evaluate_multi_if.py --experiment-id B0
 ```
 
-B0 完成后才开始付费 GPU 训练：
+### Distillation cold start
 
-```powershell
-python src/train_sft.py --experiment S1
-python src/train_sft.py --experiment S2
-
-# 根据 S1/S2 的正式评测结果选择 attention 或 all-linear
-python src/train_sft.py --experiment S3 --target-strategy attention
-python src/train_sft.py --experiment S4 --target-strategy attention
+```bash
+python src/build_distill_dataset.py --local-files-only
+python src/train_distill.py --experiment T1_v2 --config configs/rlvr.yaml --local-files-only
 ```
 
-上例假设 `attention` 获胜；不能只根据训练 loss 选胜者。B0 不运行
-`train_sft.py`，它是直接加载 Base 模型后执行同一评测流程。
+The formal cold-start wrapper is available at `scripts/run_autodl_t1_v2_formal.sh`.
 
-## 能力边界
+### RLVR training
 
-数据清洗包含结构校验、精确去重、显式硬规则、风险打分、任务平衡和
-匹配消融构造。它不能自动证明每个答案事实正确。最终结论必须来自固定
-评测、原始生成结果和错误分析，不能只比较 loss，也不能把抽查 200 条
-说成“清洗了 10,000 条”。
+R0, R1, and R2 share the same configuration and initialization contract. A preflight check can be run without starting training:
+
+```bash
+python src/train_rlvr.py --experiment R0 --config configs/rlvr.yaml --preflight-only
+python src/train_rlvr.py --experiment R1 --config configs/rlvr.yaml --preflight-only
+python src/train_rlvr.py --experiment R2 --config configs/rlvr.yaml --preflight-only
+```
+
+Full training requires a compatible GPU environment and the verified `T1_v2` adapter path.
+
+### Native vLLM evaluation
+
+On the Linux/AutoDL environment used for the formal comparison:
+
+```bash
+RUN_ID=R0 PILOT_LIMIT=454 MAX_NEW_TOKENS=2048 EVAL_MODE=native \
+  bash scripts/run_autodl_vllm_merged_pilot.sh
+```
+
+Repeat with `RUN_ID=R1` and `RUN_ID=R2`. The script writes one JSONL answer file and one summary JSON per run under `reports/eval_rlvr/`.
+
+## Limitations
+
+- The study uses one model size, one primary benchmark, and one seed per formal RL run.
+- The official checker has known edge cases for some Chinese punctuation, word-boundary, and sentence-count rules.
+- Long reasoning generations still show substantial clipping, empty answers, repetition, and unclosed thinking structures.
+- HF SFT scores and native vLLM RLVR scores are different evaluation groups and should not be compared as direct absolute improvements.
+- The results establish an auditable engineering baseline, not a universal ranking of RL algorithms.
+
+## License
+
+The source code is released under the [MIT License](LICENSE). Model weights and upstream datasets remain subject to their original licenses and terms.
+
